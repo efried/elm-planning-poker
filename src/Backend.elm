@@ -140,6 +140,9 @@ updateFromFrontend sessionId clientId msg model =
                 )
             )
 
+        LeavePlanningRoom ->
+            update (ClientDisconnected sessionId clientId) model
+
 
 subscriptions : Model -> Sub BackendMsg
 subscriptions model =

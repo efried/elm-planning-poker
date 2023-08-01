@@ -57,6 +57,9 @@ update msg model =
         RequestPlanningRoom ->
             ( model, Lamdera.sendToBackend (JoinPlanningRoom model.roomCode) )
 
+        LeftPlanningRoom ->
+            ( { model | room = Nothing }, Lamdera.sendToBackend LeavePlanningRoom )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -147,9 +150,24 @@ view model =
 
             Just room ->
                 column [ width fill, height fill, padding 16 ]
-                    [ row [ alignRight ]
-                        [ column
+                    [ row [ width fill ]
+                        [ column [ alignLeft ]
+                            [ Input.button
+                                [ centerX
+                                , padding 8
+                                , Border.rounded 8
+                                , Background.color builtins.green
+                                , Font.color builtins.white
+                                , Font.size 16
+                                , alignBottom
+                                ]
+                                { onPress = Just LeftPlanningRoom
+                                , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave" ]
+                                }
+                            ]
+                        , column
                             [ spacing 8
+                            , alignRight
                             , Font.size 16
                             , Font.color builtins.green
                             , Font.semiBold

@@ -28,12 +28,14 @@ type FrontendMsg
     | ScoreSelected Int
     | RoomCodeEntered String
     | RequestPlanningRoom
+    | LeftPlanningRoom
 
 
 type ToBackend
     = NoOpToBackend
     | CreatePlanningRoom
     | JoinPlanningRoom String
+    | LeavePlanningRoom
 
 
 type BackendMsg
