@@ -146,27 +146,37 @@ view model =
                     ]
 
             Just room ->
-                column [ centerX, centerY, spacing 16 ]
-                    [ el [ centerX ] (text ("Key: " ++ room.key))
-                    , el [ centerX ] (text ("Connected clients: " ++ String.fromInt (List.length room.points)))
-                    , Input.radioRow [ padding 10, spacing 20, centerX, centerY ]
-                        { onChange = ScoreSelected
-                        , selected = model.scoreSelection
-                        , label = Input.labelAbove [ centerX ] (text "Select a score")
-                        , options =
-                            List.map
-                                (\val ->
-                                    Input.optionWith val
-                                        (radioOption
-                                            (text
-                                                (val
-                                                    |> String.fromInt
-                                                )
+                column [ width fill, height fill, padding 16 ]
+                    [ row [ alignRight ]
+                        [ column
+                            [ spacing 8
+                            , Font.size 16
+                            , Font.color builtins.green
+                            , Font.semiBold
+                            , Font.family [ Font.monospace ]
+                            ]
+                            [ text ("Room key: " ++ room.key)
+                            , text ("Connected clients: " ++ String.fromInt (List.length room.points))
+                            ]
+                        ]
+                    , row [ centerX, centerY ]
+                        [ Input.radioRow [ spacing 16, centerX, centerY ]
+                            { onChange = ScoreSelected
+                            , selected = model.scoreSelection
+                            , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a score")
+                            , options =
+                                List.map
+                                    (\val ->
+                                        Input.optionWith val
+                                            (val
+                                                |> String.fromInt
+                                                |> text
+                                                |> radioOption
                                             )
-                                        )
-                                )
-                                scoreOptions
-                        }
+                                    )
+                                    scoreOptions
+                            }
+                        ]
                     ]
         )
 
