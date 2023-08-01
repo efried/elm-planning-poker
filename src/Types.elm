@@ -4,42 +4,15 @@ import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 
 
-type Score
-    = One
-    | Two
-    | Four
-    | Eight
-    | Sixteen
-
-
-scoreToInt : Score -> Int
-scoreToInt score =
-    case score of
-        One ->
-            1
-
-        Two ->
-            2
-
-        Four ->
-            4
-
-        Eight ->
-            8
-
-        Sixteen ->
-            16
-
-
 type alias Room =
     { key : String
-    , points : List { clientId : ClientId, value : Maybe Score }
+    , points : List { clientId : ClientId, value : Maybe Int }
     }
 
 
 type alias FrontendModel =
     { room : Maybe Room
-    , scoreSelection : Score
+    , scoreSelection : Maybe Int
     , roomCode : String
     }
 
@@ -52,7 +25,7 @@ type alias BackendModel =
 type FrontendMsg
     = NoOpFrontendMsg
     | PlanningRoomCreated
-    | ScoreSelected Score
+    | ScoreSelected Int
     | RoomCodeEntered String
     | RequestPlanningRoom
 

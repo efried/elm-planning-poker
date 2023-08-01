@@ -1,8 +1,6 @@
 module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
-import Browser.Navigation as Nav
-import Debug
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -12,7 +10,6 @@ import Html exposing (Html)
 import Lamdera
 import Maybe exposing (..)
 import Types exposing (..)
-import Url
 
 
 type alias Model =
@@ -37,7 +34,7 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing, scoreSelection = One, roomCode = "" }
+    ( { room = Nothing, scoreSelection = Nothing, roomCode = "" }
     , Cmd.none
     )
 
@@ -52,7 +49,7 @@ update msg model =
             ( model, Lamdera.sendToBackend CreatePlanningRoom )
 
         ScoreSelected score ->
-            ( { model | scoreSelection = score }, Cmd.none )
+            ( { model | scoreSelection = Just score }, Cmd.none )
 
         RoomCodeEntered code ->
             ( { model | roomCode = code }, Cmd.none )
@@ -154,7 +151,7 @@ view model =
                     , el [ centerX ] (text ("Connected clients: " ++ String.fromInt (List.length room.points)))
                     , Input.radioRow [ padding 10, spacing 20, centerX, centerY ]
                         { onChange = ScoreSelected
-                        , selected = Just model.scoreSelection
+                        , selected = model.scoreSelection
                         , label = Input.labelAbove [ centerX ] (text "Select a score")
                         , options =
                             List.map
@@ -163,20 +160,24 @@ view model =
                                         (radioOption
                                             (text
                                                 (val
-                                                    |> scoreToInt
                                                     |> String.fromInt
                                                 )
                                             )
                                         )
                                 )
-                                [ One, Two, Four, Eight, Sixteen ]
+                                scoreOptions
                         }
                     ]
         )
 
 
 
--- COLORS
+-- CONSTANTS
+
+
+scoreOptions : List Int
+scoreOptions =
+    [ 1, 2, 4, 8, 16, 24, 36, 48, 72 ]
 
 
 type alias BuiltInColors =
