@@ -46,8 +46,8 @@ update msg model =
                         (\key room ->
                             { key = key
                             , points =
-                                List.filter
-                                    (\point -> point.clientId /= clientId)
+                                Dict.filter
+                                    (\pointClient _ -> pointClient /= clientId)
                                     room.points
                             }
                         )
@@ -57,7 +57,7 @@ update msg model =
                 clientRoomKeys =
                     model.rooms
                         |> Dict.filter
-                            (\_ room -> List.any (\point -> point.clientId == clientId) room.points)
+                            (\_ room -> Dict.member clientId room.points)
                         |> Dict.keys
 
                 batchUpdates : String -> List (Cmd backendMsg) -> List (Cmd backendMsg)
@@ -65,11 +65,12 @@ update msg model =
                     Dict.get key updatedRooms
                         |> Maybe.map
                             (\room ->
-                                List.map
-                                    (\point ->
-                                        sendToFrontend point.clientId (PlanningRoomReceived (Just room))
-                                    )
-                                    room.points
+                                room.points
+                                    |> Dict.keys
+                                    |> List.map
+                                        (\client ->
+                                            sendToFrontend client (PlanningRoomReceived (Just room))
+                                        )
                             )
                         |> Maybe.withDefault []
                         |> List.append updates
@@ -84,7 +85,7 @@ update msg model =
             let
                 room : Room
                 room =
-                    { key = key, points = [ { clientId = clientId, value = Nothing } ] }
+                    { key = key, points = Dict.singleton clientId Nothing }
             in
             ( { rooms = Dict.insert key room model.rooms }
             , sendToFrontend clientId (PlanningRoomReceived (Just room))
@@ -115,7 +116,7 @@ updateFromFrontend sessionId clientId msg model =
                     Dict.update key
                         (Maybe.map
                             (\room ->
-                                { room | points = { clientId = clientId, value = Nothing } :: room.points }
+                                { room | points = Dict.insert clientId Nothing room.points }
                             )
                         )
                         model.rooms
@@ -127,7 +128,7 @@ updateFromFrontend sessionId clientId msg model =
                 clientsToUpdate : List ClientId
                 clientsToUpdate =
                     updatedRoom
-                        |> Maybe.map (\room -> List.map (\point -> point.clientId) room.points)
+                        |> Maybe.map (\room -> Dict.keys room.points)
                         |> Maybe.withDefault []
             in
             ( { model | rooms = mappedRooms }

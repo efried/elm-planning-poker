@@ -1,6 +1,7 @@
 module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
+import Dict exposing (..)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -23,7 +24,7 @@ app =
         , onUrlChange = \_ -> NoOpFrontendMsg
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \m -> Sub.none
+        , subscriptions = \_ -> Sub.none
         , view =
             \model ->
                 { title = "Planning Poker"
@@ -174,7 +175,7 @@ view model =
                             , Font.family [ Font.monospace ]
                             ]
                             [ text ("Room key: " ++ room.key)
-                            , text ("Connected clients: " ++ String.fromInt (List.length room.points))
+                            , text ("Connected clients: " ++ String.fromInt (Dict.size room.points))
                             ]
                         ]
                     , row [ centerX, centerY ]

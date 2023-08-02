@@ -6,7 +6,7 @@ import Lamdera exposing (ClientId, SessionId)
 
 type alias Room =
     { key : String
-    , points : List { clientId : ClientId, value : Maybe Int }
+    , points : Dict ClientId (Maybe Int)
     }
 
 
