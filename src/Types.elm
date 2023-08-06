@@ -13,7 +13,7 @@ type alias Room =
 type alias FrontendModel =
     { room : Maybe Room
     , scoreSelection : Maybe Int
-    , roomCode : String
+    , enteredRoomCode : String
     }
 
 
@@ -25,7 +25,7 @@ type alias BackendModel =
 type FrontendMsg
     = NoOpFrontendMsg
     | PlanningRoomCreated
-    | ScoreSelected Int
+    | ScoreSelected Room Int
     | RoomCodeEntered String
     | RequestPlanningRoom
     | LeftPlanningRoom
@@ -36,6 +36,7 @@ type ToBackend
     | CreatePlanningRoom
     | JoinPlanningRoom String
     | LeavePlanningRoom
+    | UpdateClientScore String Int
 
 
 type BackendMsg

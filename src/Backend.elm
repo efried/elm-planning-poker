@@ -45,10 +45,7 @@ update msg model =
                     Dict.map
                         (\key room ->
                             { key = key
-                            , points =
-                                Dict.filter
-                                    (\pointClient _ -> pointClient /= clientId)
-                                    room.points
+                            , points = Dict.remove clientId room.points
                             }
                         )
                         model.rooms
@@ -115,9 +112,7 @@ updateFromFrontend sessionId clientId msg model =
                 mappedRooms =
                     Dict.update key
                         (Maybe.map
-                            (\room ->
-                                { room | points = Dict.insert clientId Nothing room.points }
-                            )
+                            (\room -> { room | points = Dict.insert clientId Nothing room.points })
                         )
                         model.rooms
 
@@ -132,6 +127,42 @@ updateFromFrontend sessionId clientId msg model =
                         |> Maybe.withDefault []
             in
             ( { model | rooms = mappedRooms }
+            , Cmd.batch
+                (List.map
+                    (\client ->
+                        sendToFrontend client (PlanningRoomReceived updatedRoom)
+                    )
+                    clientsToUpdate
+                )
+            )
+
+        UpdateClientScore roomCode score ->
+            let
+                updatedRooms : Dict.Dict String Room
+                updatedRooms =
+                    Dict.update
+                        roomCode
+                        (Maybe.map
+                            (\room ->
+                                { room
+                                    | points =
+                                        Dict.update clientId (Maybe.map (\_ -> Just score)) room.points
+                                }
+                            )
+                        )
+                        model.rooms
+
+                updatedRoom : Maybe Room
+                updatedRoom =
+                    Dict.get roomCode updatedRooms
+
+                clientsToUpdate : List ClientId
+                clientsToUpdate =
+                    updatedRoom
+                        |> Maybe.map (\room -> Dict.keys room.points)
+                        |> Maybe.withDefault []
+            in
+            ( { model | rooms = updatedRooms }
             , Cmd.batch
                 (List.map
                     (\client ->

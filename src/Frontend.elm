@@ -35,7 +35,7 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing, scoreSelection = Nothing, roomCode = "" }
+    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "" }
     , Cmd.none
     )
 
@@ -49,14 +49,14 @@ update msg model =
         PlanningRoomCreated ->
             ( model, Lamdera.sendToBackend CreatePlanningRoom )
 
-        ScoreSelected score ->
-            ( { model | scoreSelection = Just score }, Cmd.none )
+        ScoreSelected room score ->
+            ( { model | scoreSelection = Just score }, Lamdera.sendToBackend (UpdateClientScore room.key score) )
 
         RoomCodeEntered code ->
-            ( { model | roomCode = code }, Cmd.none )
+            ( { model | enteredRoomCode = code }, Cmd.none )
 
         RequestPlanningRoom ->
-            ( model, Lamdera.sendToBackend (JoinPlanningRoom model.roomCode) )
+            ( model, Lamdera.sendToBackend (JoinPlanningRoom model.enteredRoomCode) )
 
         LeftPlanningRoom ->
             ( { model | room = Nothing }, Lamdera.sendToBackend LeavePlanningRoom )
@@ -69,7 +69,7 @@ updateFromBackend msg model =
             ( model, Cmd.none )
 
         PlanningRoomReceived maybeRoom ->
-            ( { model | room = maybeRoom, roomCode = "" }, Cmd.none )
+            ( { model | room = maybeRoom, enteredRoomCode = "" }, Cmd.none )
 
 
 radioOption : Element msg -> Input.OptionState -> Element.Element msg
@@ -108,6 +108,15 @@ radioOption optionLabel status =
         )
 
 
+getScores : Room -> String
+getScores room =
+    room.points
+        |> Dict.values
+        |> List.filterMap identity
+        |> List.map String.fromInt
+        |> String.join ","
+
+
 view : Model -> Html FrontendMsg
 view model =
     layout []
@@ -138,7 +147,7 @@ view model =
                         [ column [ centerX, alignTop, spacing 16 ]
                             [ Input.text [ width fill, Font.center ]
                                 { onChange = RoomCodeEntered
-                                , text = model.roomCode
+                                , text = model.enteredRoomCode
                                 , placeholder = Just (Input.placeholder [ Font.color (rgb255 217 217 217) ] (text "Enter code"))
                                 , label = Input.labelHidden "Enter a room code"
                                 }
@@ -178,9 +187,9 @@ view model =
                             , text ("Connected clients: " ++ String.fromInt (Dict.size room.points))
                             ]
                         ]
-                    , row [ centerX, centerY ]
+                    , column [ centerX, centerY, spacingXY 0 32 ]
                         [ Input.radioRow [ spacing 16, centerX, centerY ]
-                            { onChange = ScoreSelected
+                            { onChange = ScoreSelected room
                             , selected = model.scoreSelection
                             , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a score")
                             , options =
@@ -195,6 +204,7 @@ view model =
                                     )
                                     scoreOptions
                             }
+                        , el [ centerX ] (text (getScores room))
                         ]
                     ]
         )
