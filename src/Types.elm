@@ -18,8 +18,7 @@ type alias FrontendModel =
 
 
 type alias BackendModel =
-    { rooms : Dict String Room
-    }
+    Dict String Room
 
 
 type FrontendMsg

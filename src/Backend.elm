@@ -23,9 +23,7 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { rooms = Dict.empty }
-    , Cmd.none
-    )
+    ( Dict.empty, Cmd.none )
 
 
 allRoomClientUpdates : Maybe Room -> List (Cmd BackendMsg)
@@ -53,9 +51,8 @@ update msg model =
             let
                 clientRooms : Dict.Dict String Room
                 clientRooms =
-                    model.rooms
-                        |> Dict.filter
-                            (\_ room -> Dict.member clientId room.points)
+                    model
+                        |> Dict.filter (\_ room -> Dict.member clientId room.points)
                         |> Dict.map
                             (\key room ->
                                 { key = key
@@ -65,9 +62,9 @@ update msg model =
 
                 nonClientRooms : Dict.Dict String Room
                 nonClientRooms =
-                    Dict.diff model.rooms clientRooms
+                    Dict.diff model clientRooms
             in
-            ( { rooms = Dict.union clientRooms nonClientRooms }
+            ( Dict.union clientRooms nonClientRooms
             , Cmd.batch
                 (List.foldl (Just >> allRoomClientUpdates >> List.append)
                     []
@@ -81,7 +78,7 @@ update msg model =
                 room =
                     { key = key, points = Dict.singleton clientId Nothing }
             in
-            ( { rooms = Dict.insert key room model.rooms }
+            ( Dict.insert key room model
             , sendToFrontend clientId (PlanningRoomReceived (Just room))
             )
 
@@ -111,9 +108,9 @@ updateFromFrontend sessionId clientId msg model =
                         (Maybe.map
                             (\room -> { room | points = Dict.insert clientId Nothing room.points })
                         )
-                        model.rooms
+                        model
             in
-            ( { model | rooms = updatedRooms }
+            ( updatedRooms
             , Cmd.batch (Dict.get key updatedRooms |> allRoomClientUpdates)
             )
 
@@ -131,9 +128,9 @@ updateFromFrontend sessionId clientId msg model =
                                 }
                             )
                         )
-                        model.rooms
+                        model
             in
-            ( { model | rooms = updatedRooms }
+            ( updatedRooms
             , Cmd.batch (Dict.get roomCode updatedRooms |> allRoomClientUpdates)
             )
 
