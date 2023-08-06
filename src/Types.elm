@@ -14,6 +14,7 @@ type alias FrontendModel =
     { room : Maybe Room
     , scoreSelection : Maybe Int
     , enteredRoomCode : String
+    , hideStats : Bool
     }
 
 
@@ -28,6 +29,7 @@ type FrontendMsg
     | RoomCodeEntered String
     | RequestPlanningRoom
     | LeftPlanningRoom
+    | ToggleStats
 
 
 type ToBackend

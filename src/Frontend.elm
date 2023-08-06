@@ -10,6 +10,7 @@ import Element.Input as Input
 import Html exposing (Html)
 import Lamdera
 import Maybe exposing (..)
+import Stats exposing (mode)
 import Types exposing (..)
 
 
@@ -35,7 +36,7 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "" }
+    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "", hideStats = True }
     , Cmd.none
     )
 
@@ -60,6 +61,9 @@ update msg model =
 
         LeftPlanningRoom ->
             ( { model | room = Nothing }, Lamdera.sendToBackend LeavePlanningRoom )
+
+        ToggleStats ->
+            ( { model | hideStats = not model.hideStats }, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
@@ -108,13 +112,19 @@ radioOption optionLabel status =
         )
 
 
-getScores : Room -> String
+statSection : String -> String -> Element.Element msg
+statSection label value =
+    row [ width fill, spaceEvenly ]
+        [ el [ Font.family [ Font.monospace ] ] (text label)
+        , text value
+        ]
+
+
+getScores : Room -> List Int
 getScores room =
     room.points
         |> Dict.values
         |> List.filterMap identity
-        |> List.map String.fromInt
-        |> String.join ","
 
 
 view : Model -> Html FrontendMsg
@@ -159,6 +169,15 @@ view model =
                     ]
 
             Just room ->
+                let
+                    scores : List Int
+                    scores =
+                        getScores room
+
+                    roomMode : List Int
+                    roomMode =
+                        mode scores
+                in
                 column [ width fill, height fill, padding 16 ]
                     [ row [ width fill ]
                         [ column [ alignLeft ]
@@ -166,8 +185,9 @@ view model =
                                 [ centerX
                                 , padding 8
                                 , Border.rounded 8
-                                , Background.color builtins.green
-                                , Font.color builtins.white
+                                , Border.color builtins.green
+                                , Border.width 2
+                                , Font.color builtins.green
                                 , Font.size 16
                                 , alignBottom
                                 ]
@@ -187,7 +207,7 @@ view model =
                             , text ("Connected clients: " ++ String.fromInt (Dict.size room.points))
                             ]
                         ]
-                    , column [ centerX, centerY, spacingXY 0 32 ]
+                    , row [ height (fillPortion 4), centerX, spacingXY 0 32 ]
                         [ Input.radioRow [ spacing 16, centerX, centerY ]
                             { onChange = ScoreSelected room
                             , selected = model.scoreSelection
@@ -204,7 +224,61 @@ view model =
                                     )
                                     scoreOptions
                             }
-                        , el [ centerX ] (text (getScores room))
+                        ]
+                    , row
+                        [ centerX, height (fillPortion 2), width fill ]
+                        [ column [ alignTop, centerX, width (fill |> maximum 400), spacing 16 ]
+                            (List.append
+                                [ Input.button
+                                    [ centerX
+                                    , padding 8
+                                    , Font.color builtins.green
+                                    , Border.color builtins.green
+                                    , Border.rounded 8
+                                    , Border.width 2
+                                    ]
+                                    { onPress = Just ToggleStats
+                                    , label =
+                                        if model.hideStats then
+                                            text "Reveal Results"
+
+                                        else
+                                            text "Hide Results"
+                                    }
+                                ]
+                                (if model.hideStats then
+                                    [ statSection "Votes counted" (List.length scores |> String.fromInt) ]
+
+                                 else
+                                    [ statSection "Scores"
+                                        (if List.isEmpty scores then
+                                            "None"
+
+                                         else
+                                            scores
+                                                |> List.sort
+                                                |> List.map String.fromInt
+                                                |> String.join ", "
+                                        )
+                                    , statSection "Mode"
+                                        (if List.isEmpty roomMode then
+                                            "None"
+
+                                         else
+                                            roomMode
+                                                |> List.map String.fromInt
+                                                |> String.join ", "
+                                        )
+                                    , statSection "Average"
+                                        (if List.isEmpty scores then
+                                            "None"
+
+                                         else
+                                            (List.sum scores // List.length scores) |> String.fromInt
+                                        )
+                                    ]
+                                )
+                            )
                         ]
                     ]
         )
@@ -221,9 +295,6 @@ scoreOptions =
 
 type alias BuiltInColors =
     { babyBlue : Color
-    , yellow : Color
-    , red : Color
-    , pink : Color
     , green : Color
     , white : Color
     , black : Color
@@ -233,9 +304,6 @@ type alias BuiltInColors =
 builtins : BuiltInColors
 builtins =
     { babyBlue = rgb255 138 205 234
-    , yellow = rgb255 242 255 73
-    , red = rgb255 146 45 80
-    , pink = rgb255 205 172 161
     , green = rgb255 16 69 71
     , white = rgb255 255 255 255
     , black = rgb255 0 0 0
