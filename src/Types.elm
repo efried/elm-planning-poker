@@ -30,6 +30,7 @@ type FrontendMsg
     | RequestPlanningRoom
     | LeftPlanningRoom
     | ToggleStats
+    | ResetRoom Room
 
 
 type ToBackend
@@ -38,6 +39,7 @@ type ToBackend
     | JoinPlanningRoom String
     | LeavePlanningRoom
     | UpdateClientScore String Int
+    | ResetRoomScores String
 
 
 type BackendMsg

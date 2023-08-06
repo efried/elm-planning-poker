@@ -137,6 +137,17 @@ updateFromFrontend sessionId clientId msg model =
         LeavePlanningRoom ->
             update (ClientDisconnected sessionId clientId) model
 
+        ResetRoomScores roomCode ->
+            let
+                updatedRooms : Dict.Dict String Room
+                updatedRooms =
+                    Dict.update
+                        roomCode
+                        (Maybe.map (\room -> { room | points = Dict.map (\key val -> Nothing) room.points }))
+                        model
+            in
+            ( updatedRooms, Cmd.batch (Dict.get roomCode updatedRooms |> allRoomClientUpdates) )
+
 
 subscriptions : Model -> Sub BackendMsg
 subscriptions model =

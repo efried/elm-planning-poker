@@ -65,6 +65,9 @@ update msg model =
         ToggleStats ->
             ( { model | hideStats = not model.hideStats }, Cmd.none )
 
+        ResetRoom room ->
+            ( { model | scoreSelection = Nothing }, Lamdera.sendToBackend (ResetRoomScores room.key) )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -229,22 +232,33 @@ view model =
                         [ centerX, height (fillPortion 2), width fill ]
                         [ column [ alignTop, centerX, width (fill |> maximum 400), spacing 16 ]
                             (List.append
-                                [ Input.button
-                                    [ centerX
-                                    , padding 8
-                                    , Font.color builtins.green
-                                    , Border.color builtins.green
-                                    , Border.rounded 8
-                                    , Border.width 2
-                                    ]
-                                    { onPress = Just ToggleStats
-                                    , label =
-                                        if model.hideStats then
-                                            text "Reveal Results"
+                                [ row [ spaceEvenly, width fill ]
+                                    [ Input.button
+                                        [ padding 8
+                                        , Font.color builtins.green
+                                        , Border.color builtins.green
+                                        , Border.rounded 8
+                                        , Border.width 2
+                                        ]
+                                        { onPress = Just ToggleStats
+                                        , label =
+                                            if model.hideStats then
+                                                text "Reveal Results"
 
-                                        else
-                                            text "Hide Results"
-                                    }
+                                            else
+                                                text "Hide Results"
+                                        }
+                                    , Input.button
+                                        [ padding 8
+                                        , Font.color builtins.red
+                                        , Border.color builtins.red
+                                        , Border.rounded 8
+                                        , Border.width 2
+                                        ]
+                                        { onPress = Just (ResetRoom room)
+                                        , label = text "Reset"
+                                        }
+                                    ]
                                 ]
                                 (if model.hideStats then
                                     [ statSection "Votes counted" (List.length scores |> String.fromInt) ]
@@ -298,6 +312,7 @@ type alias BuiltInColors =
     , green : Color
     , white : Color
     , black : Color
+    , red : Color
     }
 
 
@@ -307,4 +322,5 @@ builtins =
     , green = rgb255 16 69 71
     , white = rgb255 255 255 255
     , black = rgb255 0 0 0
+    , red = rgb255 222 108 131
     }
