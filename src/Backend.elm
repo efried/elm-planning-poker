@@ -60,11 +60,13 @@ update msg model =
                                 }
                             )
 
-                nonClientRooms : Dict.Dict String Room
-                nonClientRooms =
-                    Dict.diff model clientRooms
+                nonEmptyRooms : Dict.Dict String Room
+                nonEmptyRooms =
+                    Dict.union
+                        (Dict.filter (\_ room -> Dict.isEmpty room.points |> not) clientRooms)
+                        (Dict.diff model clientRooms)
             in
-            ( Dict.union clientRooms nonClientRooms
+            ( nonEmptyRooms
             , Cmd.batch
                 (List.foldl (Just >> allRoomClientUpdates >> List.append)
                     []
@@ -143,7 +145,7 @@ updateFromFrontend sessionId clientId msg model =
                 updatedRooms =
                     Dict.update
                         roomCode
-                        (Maybe.map (\room -> { room | points = Dict.map (\key val -> Nothing) room.points }))
+                        (Maybe.map (\room -> { room | points = Dict.map (\_ _ -> Nothing) room.points }))
                         model
             in
             ( updatedRooms, Cmd.batch (Dict.get roomCode updatedRooms |> allRoomClientUpdates) )
