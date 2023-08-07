@@ -7,7 +7,8 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html exposing (Html)
+import Html exposing (Html, hr)
+import Html.Attributes as HtmlAttributes
 import Lamdera
 import Maybe exposing (..)
 import Stats exposing (mode)
@@ -79,6 +80,23 @@ updateFromBackend msg model =
             ( { model | room = maybeRoom, enteredRoomCode = "" }, Cmd.none )
 
 
+logo : Element msg
+logo =
+    el
+        [ centerX
+        , Font.color builtins.green
+        , Font.shadow
+            { color = builtins.black
+            , offset = ( 2, 2 )
+            , blur = 1
+            }
+        , Font.heavy
+        , Font.size 48
+        , padding 128
+        ]
+        (text "Planning Poker")
+
+
 radioOption : Element msg -> Input.OptionState -> Element.Element msg
 radioOption optionLabel status =
     let
@@ -138,7 +156,7 @@ view model =
                 column [ width fill, height fill ]
                     [ row
                         [ centerX
-                        , height (fillPortion 3)
+                        , height (fillPortion 5)
                         , width fill
                         , padding 16
                         ]
@@ -149,14 +167,16 @@ view model =
                             , Background.color builtins.green
                             , Font.color builtins.white
                             , alignBottom
+                            , above logo
                             ]
                             { onPress = Just PlanningRoomCreated
                             , label = text "Start New Session"
                             }
                         ]
-                    , row [ height (fillPortion 1), centerX ] [ text "OR" ]
+                    , row [ height (fillPortion 1), centerX, width (fill |> maximum 200) ]
+                        [ html (hr [ HtmlAttributes.style "width" "100%" ] []) ]
                     , row
-                        [ height (fillPortion 3), width fill, padding 16 ]
+                        [ height (fillPortion 5), width fill, padding 16 ]
                         [ column [ centerX, alignTop, spacing 16 ]
                             [ Input.text [ width fill, Font.center ]
                                 { onChange = RoomCodeEntered
