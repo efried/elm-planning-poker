@@ -182,7 +182,7 @@ view model =
                         mode scores
                 in
                 column [ width fill, height fill, padding 16 ]
-                    [ row [ width fill ]
+                    [ wrappedRow [ width fill ]
                         [ column [ alignLeft ]
                             [ Input.button
                                 [ centerX
@@ -206,11 +206,11 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ text ("Room key: " ++ room.key)
-                            , text ("Connected clients: " ++ String.fromInt (Dict.size room.points))
+                            [ el [ alignRight ] (text ("Room key: " ++ room.key))
+                            , el [ alignRight ] (text ("Connected clients: " ++ String.fromInt (Dict.size room.points)))
                             ]
                         ]
-                    , row [ height (fillPortion 4), centerX, spacingXY 0 32 ]
+                    , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32 ]
                         [ Input.radioRow [ spacing 16, centerX, centerY ]
                             { onChange = ScoreSelected room
                             , selected = model.scoreSelection
