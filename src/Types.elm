@@ -4,8 +4,13 @@ import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 
 
+type alias PointOptions =
+    List Int
+
+
 type alias Room =
     { key : String
+    , pointOptions : PointOptions
     , points : Dict ClientId (Maybe Int)
     }
 
@@ -14,6 +19,7 @@ type alias FrontendModel =
     { room : Maybe Room
     , scoreSelection : Maybe Int
     , enteredRoomCode : String
+    , pointOptions : PointOptions
     , hideStats : Bool
     }
 
@@ -31,11 +37,12 @@ type FrontendMsg
     | LeftPlanningRoom
     | ToggleStats
     | ResetRoom Room
+    | ChoosePointOptions PointOptions
 
 
 type ToBackend
     = NoOpToBackend
-    | CreatePlanningRoom
+    | CreatePlanningRoom PointOptions
     | JoinPlanningRoom String
     | LeavePlanningRoom
     | UpdateClientScore String Int
@@ -46,7 +53,7 @@ type BackendMsg
     = NoOpBackendMsg
     | ClientConnected SessionId ClientId
     | ClientDisconnected SessionId ClientId
-    | KeyCreated ClientId String
+    | KeyCreated ClientId PointOptions String
 
 
 type ToFrontend

@@ -54,9 +54,9 @@ update msg model =
                     model
                         |> Dict.filter (\_ room -> Dict.member clientId room.points)
                         |> Dict.map
-                            (\key room ->
-                                { key = key
-                                , points = Dict.remove clientId room.points
+                            (\_ room ->
+                                { room
+                                    | points = Dict.remove clientId room.points
                                 }
                             )
 
@@ -74,11 +74,11 @@ update msg model =
                 )
             )
 
-        KeyCreated clientId key ->
+        KeyCreated clientId pointOptions key ->
             let
                 room : Room
                 room =
-                    { key = key, points = Dict.singleton clientId Nothing }
+                    { key = key, pointOptions = pointOptions, points = Dict.singleton clientId Nothing }
             in
             ( Dict.insert key room model
             , sendToFrontend clientId (PlanningRoomReceived (Just room))
@@ -99,8 +99,8 @@ updateFromFrontend sessionId clientId msg model =
         NoOpToBackend ->
             ( model, Cmd.none )
 
-        CreatePlanningRoom ->
-            ( model, Random.generate (KeyCreated clientId) keyGenerator )
+        CreatePlanningRoom pointOptions ->
+            ( model, Random.generate (KeyCreated clientId pointOptions) keyGenerator )
 
         JoinPlanningRoom key ->
             let

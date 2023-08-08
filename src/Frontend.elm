@@ -37,7 +37,7 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "", hideStats = True }
+    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "", hideStats = True, pointOptions = fibonacci }
     , Cmd.none
     )
 
@@ -49,7 +49,7 @@ update msg model =
             ( model, Cmd.none )
 
         PlanningRoomCreated ->
-            ( model, Lamdera.sendToBackend CreatePlanningRoom )
+            ( model, Lamdera.sendToBackend (CreatePlanningRoom model.pointOptions) )
 
         ScoreSelected room score ->
             ( { model | scoreSelection = Just score }, Lamdera.sendToBackend (UpdateClientScore room.key score) )
@@ -68,6 +68,9 @@ update msg model =
 
         ResetRoom room ->
             ( { model | scoreSelection = Nothing }, Lamdera.sendToBackend (ResetRoomScores room.key) )
+
+        ChoosePointOptions options ->
+            ( { model | pointOptions = options }, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
@@ -92,7 +95,6 @@ logo =
             }
         , Font.heavy
         , Font.size 48
-        , padding 128
         ]
         (text "Planning Poker")
 
@@ -155,23 +157,54 @@ view model =
             Nothing ->
                 column [ width fill, height fill ]
                     [ row
-                        [ centerX
-                        , height (fillPortion 5)
+                        [ height (fillPortion 5)
                         , width fill
-                        , padding 16
                         ]
-                        [ Input.button
-                            [ centerX
-                            , padding 16
-                            , Border.rounded 8
-                            , Background.color builtins.green
-                            , Font.color builtins.white
-                            , alignBottom
-                            , above logo
+                        [ column
+                            [ height fill
+                            , centerX
                             ]
-                            { onPress = Just PlanningRoomCreated
-                            , label = text "Start New Session"
-                            }
+                            [ el
+                                [ centerX
+                                , Font.color builtins.green
+                                , Font.shadow
+                                    { color = builtins.black
+                                    , offset = ( 2, 2 )
+                                    , blur = 1
+                                    }
+                                , Font.heavy
+                                , Font.size 48
+                                , paddingXY 0 80
+                                ]
+                                (text "Planning Poker")
+                            , Input.button
+                                [ centerX
+                                , padding 16
+                                , Border.rounded 8
+                                , Background.color builtins.green
+                                , Font.color builtins.white
+                                , alignBottom
+                                ]
+                                { onPress = Just PlanningRoomCreated
+                                , label = text "Start New Session"
+                                }
+                            , el [ centerX ]
+                                (Input.radio
+                                    [ paddingXY 0 16
+                                    ]
+                                    { onChange = ChoosePointOptions
+                                    , selected = Just model.pointOptions
+                                    , label =
+                                        Input.labelLeft
+                                            [ paddingEach { left = 0, right = 16, top = 0, bottom = 0 } ]
+                                            (text "Options")
+                                    , options =
+                                        [ Input.option fibonacci (text "Fibonacci")
+                                        , Input.option timesTwo (text "Multiply by 2")
+                                        ]
+                                    }
+                                )
+                            ]
                         ]
                     , row [ height (fillPortion 1), centerX, width (fill |> maximum 200) ]
                         [ html (hr [ HtmlAttributes.style "width" "100%" ] []) ]
@@ -245,7 +278,7 @@ view model =
                                                 |> radioOption
                                             )
                                     )
-                                    scoreOptions
+                                    room.pointOptions
                             }
                         ]
                     , row
@@ -322,9 +355,14 @@ view model =
 -- CONSTANTS
 
 
-scoreOptions : List Int
-scoreOptions =
+timesTwo : PointOptions
+timesTwo =
     [ 1, 2, 4, 8, 16, 24, 36, 48, 72 ]
+
+
+fibonacci : PointOptions
+fibonacci =
+    [ 1, 2, 3, 5, 8, 13, 21, 34, 55 ]
 
 
 type alias BuiltInColors =
