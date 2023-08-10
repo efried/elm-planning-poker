@@ -1,7 +1,7 @@
-module Types exposing (..)
+module Evergreen.V4.Types exposing (..)
 
-import Dict exposing (Dict)
-import Lamdera exposing (ClientId, SessionId)
+import Dict
+import Lamdera
 
 
 type alias PointOptions =
@@ -11,7 +11,7 @@ type alias PointOptions =
 type alias Room =
     { key : String
     , pointOptions : PointOptions
-    , points : Dict ClientId (Maybe Int)
+    , points : Dict.Dict Lamdera.ClientId (Maybe Int)
     }
 
 
@@ -25,7 +25,7 @@ type alias FrontendModel =
 
 
 type alias BackendModel =
-    Dict String Room
+    Dict.Dict String Room
 
 
 type FrontendMsg
@@ -52,9 +52,9 @@ type ToBackend
 
 type BackendMsg
     = NoOpBackendMsg
-    | ClientConnected SessionId ClientId
-    | ClientDisconnected SessionId ClientId
-    | KeyCreated ClientId PointOptions String
+    | ClientConnected Lamdera.SessionId Lamdera.ClientId
+    | ClientDisconnected Lamdera.SessionId Lamdera.ClientId
+    | KeyCreated Lamdera.ClientId PointOptions String
 
 
 type ToFrontend

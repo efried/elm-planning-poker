@@ -1,4 +1,4 @@
-module Frontend exposing (..)
+port module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Dict exposing (..)
@@ -9,6 +9,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html, hr)
 import Html.Attributes as HtmlAttributes
+import Icons
 import Lamdera
 import Maybe exposing (..)
 import Stats exposing (mostCommon)
@@ -72,6 +73,9 @@ update msg model =
         ChoosePointOptions options ->
             ( { model | pointOptions = options }, Cmd.none )
 
+        CopyKeyToClipboard room ->
+            ( model, copy_to_clipboard_to_js room.key )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -81,6 +85,9 @@ updateFromBackend msg model =
 
         PlanningRoomReceived maybeRoom ->
             ( { model | room = maybeRoom, enteredRoomCode = "" }, Cmd.none )
+
+
+port copy_to_clipboard_to_js : String -> Cmd msg
 
 
 logo : Element msg
@@ -259,7 +266,7 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ el [ alignRight ] (text ("Room key: " ++ room.key))
+                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Room key: " ++ room.key)), Input.button [] { onPress = Just (CopyKeyToClipboard room), label = Icons.clipboard } ]
                             , el [ alignRight ] (text ("Connected clients: " ++ String.fromInt (Dict.size room.points)))
                             ]
                         ]
