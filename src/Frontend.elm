@@ -11,7 +11,7 @@ import Html exposing (Html, hr)
 import Html.Attributes as HtmlAttributes
 import Lamdera
 import Maybe exposing (..)
-import Stats exposing (mode)
+import Stats exposing (mostCommon)
 import Types exposing (..)
 
 
@@ -230,9 +230,9 @@ view model =
                     scores =
                         getScores room
 
-                    roomMode : List Int
-                    roomMode =
-                        mode scores
+                    mostCommonScore : List Int
+                    mostCommonScore =
+                        mostCommon scores
                 in
                 column [ width fill, height fill, padding 16 ]
                     [ wrappedRow [ width fill ]
@@ -327,12 +327,12 @@ view model =
                                                 |> List.map String.fromInt
                                                 |> String.join ", "
                                         )
-                                    , statSection "Mode"
-                                        (if List.isEmpty roomMode then
+                                    , statSection "Most Common Score"
+                                        (if List.isEmpty mostCommonScore then
                                             "None"
 
                                          else
-                                            roomMode
+                                            mostCommonScore
                                                 |> List.map String.fromInt
                                                 |> String.join ", "
                                         )

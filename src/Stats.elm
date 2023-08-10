@@ -1,10 +1,10 @@
-module Stats exposing (mode)
+module Stats exposing (mostCommon)
 
 import Dict
 
 
-mode : List Int -> List Int
-mode vals =
+mostCommon : List Int -> List Int
+mostCommon vals =
     let
         frequencies : Dict.Dict Int Int
         frequencies =
@@ -21,10 +21,6 @@ mode vals =
         frequencyValues =
             Dict.values frequencies
     in
-    if List.maximum frequencyValues == List.minimum frequencyValues then
-        []
-
-    else
-        frequencies
-            |> Dict.filter (\_ freq -> Just freq == List.maximum frequencyValues)
-            |> Dict.keys
+    frequencies
+        |> Dict.filter (\_ freq -> Just freq == List.maximum frequencyValues)
+        |> Dict.keys
