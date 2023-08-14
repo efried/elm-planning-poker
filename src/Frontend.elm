@@ -1,6 +1,8 @@
 port module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
+import Browser.Dom
+import Browser.Events
 import Dict exposing (..)
 import Element exposing (..)
 import Element.Background as Background
@@ -13,6 +15,7 @@ import Icons
 import Lamdera
 import Maybe exposing (..)
 import Stats exposing (mostCommon)
+import Task
 import Types exposing (..)
 
 
@@ -27,7 +30,7 @@ app =
         , onUrlChange = \_ -> NoOpFrontendMsg
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         , view =
             \model ->
                 { title = "Planning Poker"
@@ -38,8 +41,23 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing, scoreSelection = Nothing, enteredRoomCode = "", hideStats = True, pointOptions = fibonacci }
-    , Cmd.none
+    ( { room = Nothing
+      , scoreSelection = Nothing
+      , enteredRoomCode = ""
+      , hideStats = True
+      , pointOptions = fibonacci
+      , device = { class = Desktop, orientation = Landscape }
+      }
+    , Task.attempt
+        (\viewport ->
+            case viewport of
+                Err _ ->
+                    NoOpFrontendMsg
+
+                Ok vp ->
+                    GotDimensions (round vp.scene.width) (round vp.scene.height)
+        )
+        Browser.Dom.getViewport
     )
 
 
@@ -76,6 +94,9 @@ update msg model =
         CopyKeyToClipboard room ->
             ( model, copy_to_clipboard_to_js room.key )
 
+        GotDimensions w h ->
+            ( { model | device = classifyDevice { width = w, height = h } }, Cmd.none )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -85,6 +106,11 @@ updateFromBackend msg model =
 
         PlanningRoomReceived maybeRoom ->
             ( { model | room = maybeRoom, enteredRoomCode = "" }, Cmd.none )
+
+
+subscriptions : Model -> Sub FrontendMsg
+subscriptions _ =
+    Browser.Events.onResize (\w h -> GotDimensions w h)
 
 
 port copy_to_clipboard_to_js : String -> Cmd msg
@@ -128,6 +154,7 @@ radioOption optionLabel status =
     el
         [ height boxLength
         , width boxLength
+        , centerX
         , padding 8
         , Border.rounded 4
         , Border.glow builtins.babyBlue glowSize
@@ -270,8 +297,14 @@ view model =
                             , el [ alignRight ] (text ("Connected clients: " ++ String.fromInt (Dict.size room.points)))
                             ]
                         ]
-                    , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32 ]
-                        [ Input.radioRow [ spacing 16, centerX, centerY ]
+                    , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32, paddingXY 0 24 ]
+                        [ (if model.device.class == Phone then
+                            Input.radio
+
+                           else
+                            Input.radioRow
+                          )
+                            [ spacing 16, centerX, centerY ]
                             { onChange = ScoreSelected room
                             , selected = model.scoreSelection
                             , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a score")
