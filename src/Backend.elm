@@ -26,14 +26,14 @@ init =
     ( Dict.empty, Cmd.none )
 
 
-allRoomClientUpdates : Maybe Room -> List (Cmd BackendMsg)
-allRoomClientUpdates room =
-    room
-        |> Maybe.map (\r -> Dict.keys r.points)
+allPlayersUpdates : Maybe Game -> List (Cmd BackendMsg)
+allPlayersUpdates maybeGame =
+    maybeGame
+        |> Maybe.map (\game -> Dict.keys game.playedCards)
         |> Maybe.withDefault []
         |> List.map
-            (\client ->
-                sendToFrontend client (PlanningRoomReceived room)
+            (\player ->
+                sendToFrontend player (GameReceived maybeGame)
             )
 
 
@@ -49,39 +49,39 @@ update msg model =
 
         ClientDisconnected sessionId clientId ->
             let
-                clientRooms : Dict.Dict String Room
-                clientRooms =
+                playerGames : Dict.Dict String Game
+                playerGames =
                     model
-                        |> Dict.filter (\_ room -> Dict.member clientId room.points)
+                        |> Dict.filter (\_ game -> Dict.member clientId game.playedCards)
                         |> Dict.map
-                            (\_ room ->
-                                { room
-                                    | points = Dict.remove clientId room.points
+                            (\_ game ->
+                                { game
+                                    | playedCards = Dict.remove clientId game.playedCards
                                 }
                             )
 
-                nonEmptyRooms : Dict.Dict String Room
-                nonEmptyRooms =
+                nonEmptyGames : Dict.Dict String Game
+                nonEmptyGames =
                     Dict.union
-                        (Dict.filter (\_ room -> Dict.isEmpty room.points |> not) clientRooms)
-                        (Dict.diff model clientRooms)
+                        (Dict.filter (\_ game -> Dict.isEmpty game.playedCards |> not) playerGames)
+                        (Dict.diff model playerGames)
             in
-            ( nonEmptyRooms
+            ( nonEmptyGames
             , Cmd.batch
-                (List.foldl (Just >> allRoomClientUpdates >> List.append)
+                (List.foldl (Just >> allPlayersUpdates >> List.append)
                     []
-                    (Dict.values clientRooms)
+                    (Dict.values playerGames)
                 )
             )
 
-        KeyCreated clientId pointOptions key ->
+        CodeCreated clientId pointOptions code ->
             let
-                room : Room
-                room =
-                    { key = key, pointOptions = pointOptions, points = Dict.singleton clientId Nothing }
+                game : Game
+                game =
+                    { code = code, cardOptions = pointOptions, playedCards = Dict.singleton clientId Nothing }
             in
-            ( Dict.insert key room model
-            , sendToFrontend clientId (PlanningRoomReceived (Just room))
+            ( Dict.insert code game model
+            , sendToFrontend clientId (GameReceived (Just game))
             )
 
         NoOpBackendMsg ->
@@ -99,56 +99,56 @@ updateFromFrontend sessionId clientId msg model =
         NoOpToBackend ->
             ( model, Cmd.none )
 
-        CreatePlanningRoom pointOptions ->
-            ( model, Random.generate (KeyCreated clientId pointOptions) keyGenerator )
+        CreateGame pointOptions ->
+            ( model, Random.generate (CodeCreated clientId pointOptions) keyGenerator )
 
-        JoinPlanningRoom key ->
+        JoinGame code ->
             let
-                updatedRooms : Dict.Dict String Room
-                updatedRooms =
-                    Dict.update key
+                updatedGames : Dict.Dict String Game
+                updatedGames =
+                    Dict.update code
                         (Maybe.map
-                            (\room -> { room | points = Dict.insert clientId Nothing room.points })
+                            (\game -> { game | playedCards = Dict.insert clientId Nothing game.playedCards })
                         )
                         model
             in
-            ( updatedRooms
-            , Cmd.batch (Dict.get key updatedRooms |> allRoomClientUpdates)
+            ( updatedGames
+            , Cmd.batch (Dict.get code updatedGames |> allPlayersUpdates)
             )
 
-        UpdateClientScore roomCode score ->
+        UpdatePlayerCard gameCode card ->
             let
-                updatedRooms : Dict.Dict String Room
-                updatedRooms =
+                updatedGames : Dict.Dict String Game
+                updatedGames =
                     Dict.update
-                        roomCode
+                        gameCode
                         (Maybe.map
-                            (\room ->
-                                { room
-                                    | points =
-                                        Dict.update clientId (Maybe.map (\_ -> Just score)) room.points
+                            (\game ->
+                                { game
+                                    | playedCards =
+                                        Dict.update clientId (Maybe.map (\_ -> Just card)) game.playedCards
                                 }
                             )
                         )
                         model
             in
-            ( updatedRooms
-            , Cmd.batch (Dict.get roomCode updatedRooms |> allRoomClientUpdates)
+            ( updatedGames
+            , Cmd.batch (Dict.get gameCode updatedGames |> allPlayersUpdates)
             )
 
-        LeavePlanningRoom ->
+        LeaveGame ->
             update (ClientDisconnected sessionId clientId) model
 
-        ResetRoomScores roomCode ->
+        ResetGameCards gameCode ->
             let
-                updatedRooms : Dict.Dict String Room
-                updatedRooms =
+                updatedGames : Dict.Dict String Game
+                updatedGames =
                     Dict.update
-                        roomCode
-                        (Maybe.map (\room -> { room | points = Dict.map (\_ _ -> Nothing) room.points }))
+                        gameCode
+                        (Maybe.map (\game -> { game | playedCards = Dict.map (\_ _ -> Nothing) game.playedCards }))
                         model
             in
-            ( updatedRooms, Cmd.batch (Dict.get roomCode updatedRooms |> allRoomClientUpdates) )
+            ( updatedGames, Cmd.batch (Dict.get gameCode updatedGames |> allPlayersUpdates) )
 
 
 subscriptions : Model -> Sub BackendMsg

@@ -5,61 +5,61 @@ import Element exposing (Device)
 import Lamdera exposing (ClientId, SessionId)
 
 
-type alias PointOptions =
+type alias CardOptions =
     List Int
 
 
-type alias Room =
-    { key : String
-    , pointOptions : PointOptions
-    , points : Dict ClientId (Maybe Int)
+type alias Game =
+    { code : String
+    , cardOptions : CardOptions
+    , playedCards : Dict ClientId (Maybe Int)
     }
 
 
 type alias FrontendModel =
-    { room : Maybe Room
-    , scoreSelection : Maybe Int
-    , enteredRoomCode : String
-    , pointOptions : PointOptions
+    { game : Maybe Game
+    , selectedCard : Maybe Int
+    , enteredGameCode : String
+    , cardOptions : CardOptions
     , hideStats : Bool
     , device : Device
     }
 
 
 type alias BackendModel =
-    Dict String Room
+    Dict String Game
 
 
 type FrontendMsg
     = NoOpFrontendMsg
-    | PlanningRoomCreated
-    | ScoreSelected Room Int
-    | RoomCodeEntered String
-    | RequestPlanningRoom
-    | LeftPlanningRoom
+    | GameCreated
+    | CardSelected Game Int
+    | GameCodeEntered String
+    | RequestGame
+    | LeftGame
     | ToggleStats
-    | ResetRoom Room
-    | ChoosePointOptions PointOptions
-    | CopyKeyToClipboard Room
-    | GotDimensions Int Int
+    | ResetGame Game
+    | ChooseCardOptions CardOptions
+    | CopyCodeToClipboard Game
+    | GotWindowDimensions Int Int
 
 
 type ToBackend
     = NoOpToBackend
-    | CreatePlanningRoom PointOptions
-    | JoinPlanningRoom String
-    | LeavePlanningRoom
-    | UpdateClientScore String Int
-    | ResetRoomScores String
+    | CreateGame CardOptions
+    | JoinGame String
+    | LeaveGame
+    | UpdatePlayerCard String Int
+    | ResetGameCards String
 
 
 type BackendMsg
     = NoOpBackendMsg
     | ClientConnected SessionId ClientId
     | ClientDisconnected SessionId ClientId
-    | KeyCreated ClientId PointOptions String
+    | CodeCreated ClientId CardOptions String
 
 
 type ToFrontend
     = NoOpToFrontend
-    | PlanningRoomReceived (Maybe Room)
+    | GameReceived (Maybe Game)

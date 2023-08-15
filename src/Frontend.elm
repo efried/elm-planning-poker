@@ -41,11 +41,11 @@ app =
 
 init : ( Model, Cmd FrontendMsg )
 init =
-    ( { room = Nothing
-      , scoreSelection = Nothing
-      , enteredRoomCode = ""
+    ( { game = Nothing
+      , selectedCard = Nothing
+      , enteredGameCode = ""
       , hideStats = True
-      , pointOptions = fibonacci
+      , cardOptions = fibonacci
       , device = { class = Desktop, orientation = Landscape }
       }
     , Task.attempt
@@ -55,7 +55,7 @@ init =
                     NoOpFrontendMsg
 
                 Ok vp ->
-                    GotDimensions (round vp.scene.width) (round vp.scene.height)
+                    GotWindowDimensions (round vp.scene.width) (round vp.scene.height)
         )
         Browser.Dom.getViewport
     )
@@ -67,34 +67,34 @@ update msg model =
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
-        PlanningRoomCreated ->
-            ( model, Lamdera.sendToBackend (CreatePlanningRoom model.pointOptions) )
+        GameCreated ->
+            ( model, Lamdera.sendToBackend (CreateGame model.cardOptions) )
 
-        ScoreSelected room score ->
-            ( { model | scoreSelection = Just score }, Lamdera.sendToBackend (UpdateClientScore room.key score) )
+        CardSelected game card ->
+            ( { model | selectedCard = Just card }, Lamdera.sendToBackend (UpdatePlayerCard game.code card) )
 
-        RoomCodeEntered code ->
-            ( { model | enteredRoomCode = code }, Cmd.none )
+        GameCodeEntered code ->
+            ( { model | enteredGameCode = code }, Cmd.none )
 
-        RequestPlanningRoom ->
-            ( model, Lamdera.sendToBackend (JoinPlanningRoom model.enteredRoomCode) )
+        RequestGame ->
+            ( model, Lamdera.sendToBackend (JoinGame model.enteredGameCode) )
 
-        LeftPlanningRoom ->
-            ( { model | room = Nothing }, Lamdera.sendToBackend LeavePlanningRoom )
+        LeftGame ->
+            ( { model | game = Nothing }, Lamdera.sendToBackend LeaveGame )
 
         ToggleStats ->
             ( { model | hideStats = not model.hideStats }, Cmd.none )
 
-        ResetRoom room ->
-            ( { model | scoreSelection = Nothing }, Lamdera.sendToBackend (ResetRoomScores room.key) )
+        ResetGame game ->
+            ( { model | selectedCard = Nothing }, Lamdera.sendToBackend (ResetGameCards game.code) )
 
-        ChoosePointOptions options ->
-            ( { model | pointOptions = options }, Cmd.none )
+        ChooseCardOptions options ->
+            ( { model | cardOptions = options }, Cmd.none )
 
-        CopyKeyToClipboard room ->
-            ( model, copy_to_clipboard_to_js room.key )
+        CopyCodeToClipboard game ->
+            ( model, copy_to_clipboard_to_js game.code )
 
-        GotDimensions w h ->
+        GotWindowDimensions w h ->
             ( { model | device = classifyDevice { width = w, height = h } }, Cmd.none )
 
 
@@ -104,13 +104,13 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
-        PlanningRoomReceived maybeRoom ->
-            ( { model | room = maybeRoom, enteredRoomCode = "" }, Cmd.none )
+        GameReceived maybeGame ->
+            ( { model | game = maybeGame, enteredGameCode = "" }, Cmd.none )
 
 
 subscriptions : Model -> Sub FrontendMsg
 subscriptions _ =
-    Browser.Events.onResize (\w h -> GotDimensions w h)
+    Browser.Events.onResize (\w h -> GotWindowDimensions w h)
 
 
 port copy_to_clipboard_to_js : String -> Cmd msg
@@ -177,9 +177,9 @@ statSection label value =
         ]
 
 
-getScores : Room -> List Int
-getScores room =
-    room.points
+getCards : Game -> List Int
+getCards game =
+    game.playedCards
         |> Dict.values
         |> List.filterMap identity
 
@@ -187,7 +187,7 @@ getScores room =
 view : Model -> Html FrontendMsg
 view model =
     layout []
-        (case model.room of
+        (case model.game of
             Nothing ->
                 column [ width fill, height fill ]
                     [ row
@@ -219,15 +219,15 @@ view model =
                                 , Font.color builtins.white
                                 , alignBottom
                                 ]
-                                { onPress = Just PlanningRoomCreated
-                                , label = text "Start New Session"
+                                { onPress = Just GameCreated
+                                , label = text "Start New Game"
                                 }
                             , el [ centerX ]
                                 (Input.radio
                                     [ paddingXY 0 16
                                     ]
-                                    { onChange = ChoosePointOptions
-                                    , selected = Just model.pointOptions
+                                    { onChange = ChooseCardOptions
+                                    , selected = Just model.cardOptions
                                     , label =
                                         Input.labelLeft
                                             [ paddingEach { left = 0, right = 16, top = 0, bottom = 0 } ]
@@ -246,27 +246,27 @@ view model =
                         [ height (fillPortion 5), width fill, padding 16 ]
                         [ column [ centerX, alignTop, spacing 16 ]
                             [ Input.text [ width fill, Font.center ]
-                                { onChange = RoomCodeEntered
-                                , text = model.enteredRoomCode
+                                { onChange = GameCodeEntered
+                                , text = model.enteredGameCode
                                 , placeholder = Just (Input.placeholder [ Font.color (rgb255 217 217 217) ] (text "Enter code"))
-                                , label = Input.labelHidden "Enter a room code"
+                                , label = Input.labelHidden "Enter a game code"
                                 }
                             , Input.button
                                 [ centerX, padding 16, Border.rounded 8, Background.color builtins.green, Font.color builtins.white ]
-                                { onPress = Just RequestPlanningRoom, label = text "Join an existing room" }
+                                { onPress = Just RequestGame, label = text "Join Existing Game" }
                             ]
                         ]
                     ]
 
-            Just room ->
+            Just game ->
                 let
-                    scores : List Int
-                    scores =
-                        getScores room
+                    cards : List Int
+                    cards =
+                        getCards game
 
-                    mostCommonScore : List Int
-                    mostCommonScore =
-                        mostCommon scores
+                    mostCommonCard : List Int
+                    mostCommonCard =
+                        mostCommon cards
                 in
                 column [ width fill, height fill, padding 16 ]
                     [ wrappedRow [ width fill ]
@@ -281,8 +281,8 @@ view model =
                                 , Font.size 16
                                 , alignBottom
                                 ]
-                                { onPress = Just LeftPlanningRoom
-                                , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave" ]
+                                { onPress = Just LeftGame
+                                , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave Game" ]
                                 }
                             ]
                         , column
@@ -293,8 +293,8 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Room key: " ++ room.key)), Input.button [] { onPress = Just (CopyKeyToClipboard room), label = Icons.clipboard } ]
-                            , el [ alignRight ] (text ("Connected clients: " ++ String.fromInt (Dict.size room.points)))
+                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Game Code: " ++ game.code)), Input.button [] { onPress = Just (CopyCodeToClipboard game), label = Icons.clipboard } ]
+                            , el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (Dict.size game.playedCards)))
                             ]
                         ]
                     , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32, paddingXY 0 24 ]
@@ -305,9 +305,9 @@ view model =
                             Input.radioRow
                           )
                             [ spacing 16, centerX, centerY ]
-                            { onChange = ScoreSelected room
-                            , selected = model.scoreSelection
-                            , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a score")
+                            { onChange = CardSelected game
+                            , selected = model.selectedCard
+                            , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a Card")
                             , options =
                                 List.map
                                     (\val ->
@@ -318,7 +318,7 @@ view model =
                                                 |> radioOption
                                             )
                                     )
-                                    room.pointOptions
+                                    game.cardOptions
                             }
                         ]
                     , row
@@ -348,40 +348,40 @@ view model =
                                         , Border.rounded 8
                                         , Border.width 2
                                         ]
-                                        { onPress = Just (ResetRoom room)
+                                        { onPress = Just (ResetGame game)
                                         , label = text "Reset"
                                         }
                                     ]
                                 ]
                                 (if model.hideStats then
-                                    [ statSection "Votes counted" (List.length scores |> String.fromInt) ]
+                                    [ statSection "Cards counted" (List.length cards |> String.fromInt) ]
 
                                  else
-                                    [ statSection "Scores"
-                                        (if List.isEmpty scores then
+                                    [ statSection "Cards"
+                                        (if List.isEmpty cards then
                                             "None"
 
                                          else
-                                            scores
+                                            cards
                                                 |> List.sort
                                                 |> List.map String.fromInt
                                                 |> String.join ", "
                                         )
-                                    , statSection "Most Common Score"
-                                        (if List.isEmpty mostCommonScore then
+                                    , statSection "Most Common Card"
+                                        (if List.isEmpty mostCommonCard then
                                             "None"
 
                                          else
-                                            mostCommonScore
+                                            mostCommonCard
                                                 |> List.map String.fromInt
                                                 |> String.join ", "
                                         )
                                     , statSection "Average"
-                                        (if List.isEmpty scores then
+                                        (if List.isEmpty cards then
                                             "None"
 
                                          else
-                                            (List.sum scores // List.length scores) |> String.fromInt
+                                            (List.sum cards // List.length cards) |> String.fromInt
                                         )
                                     ]
                                 )
@@ -395,12 +395,12 @@ view model =
 -- CONSTANTS
 
 
-timesTwo : PointOptions
+timesTwo : CardOptions
 timesTwo =
     [ 1, 2, 4, 8, 16, 24, 36, 48, 72 ]
 
 
-fibonacci : PointOptions
+fibonacci : CardOptions
 fibonacci =
     [ 1, 2, 3, 5, 8, 13, 21, 34, 55 ]
 
