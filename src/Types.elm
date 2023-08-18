@@ -63,3 +63,4 @@ type BackendMsg
 type ToFrontend
     = NoOpToFrontend
     | GameReceived (Maybe Game)
+    | GameReset (Maybe Game)

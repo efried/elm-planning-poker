@@ -147,8 +147,22 @@ updateFromFrontend sessionId clientId msg model =
                         gameCode
                         (Maybe.map (\game -> { game | playedCards = Dict.map (\_ _ -> Nothing) game.playedCards }))
                         model
+
+                resetGame : Maybe Game
+                resetGame =
+                    Dict.get gameCode updatedGames
             in
-            ( updatedGames, Cmd.batch (Dict.get gameCode updatedGames |> allPlayersUpdates) )
+            ( updatedGames
+            , Cmd.batch
+                (resetGame
+                    |> Maybe.map (\game -> Dict.keys game.playedCards)
+                    |> Maybe.withDefault []
+                    |> List.map
+                        (\player ->
+                            sendToFrontend player (GameReset resetGame)
+                        )
+                )
+            )
 
 
 subscriptions : Model -> Sub BackendMsg

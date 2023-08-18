@@ -86,7 +86,7 @@ update msg model =
             ( { model | hideStats = not model.hideStats }, Cmd.none )
 
         ResetGame game ->
-            ( { model | selectedCard = Nothing }, Lamdera.sendToBackend (ResetGameCards game.code) )
+            ( { model | selectedCard = Nothing, hideStats = True }, Lamdera.sendToBackend (ResetGameCards game.code) )
 
         ChooseCardOptions options ->
             ( { model | cardOptions = options }, Cmd.none )
@@ -106,6 +106,9 @@ updateFromBackend msg model =
 
         GameReceived maybeGame ->
             ( { model | game = maybeGame, enteredGameCode = "" }, Cmd.none )
+
+        GameReset maybeGame ->
+            ( { model | game = maybeGame, selectedCard = Nothing, hideStats = True }, Cmd.none )
 
 
 subscriptions : Model -> Sub FrontendMsg
