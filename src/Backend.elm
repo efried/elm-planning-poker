@@ -1,7 +1,7 @@
-module Backend exposing (..)
+module Backend exposing (Model, app, init, subscriptions, update, updateFromFrontend)
 
 import Dict
-import Lamdera exposing (ClientId, SessionId, broadcast, sendToFrontend)
+import Lamdera exposing (ClientId, SessionId, sendToFrontend)
 import Random
 import Random.Char
 import Random.String as RandomString
@@ -12,6 +12,12 @@ type alias Model =
     BackendModel
 
 
+app :
+    { init : ( Model, Cmd BackendMsg )
+    , update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
+    , updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
+    , subscriptions : Model -> Sub BackendMsg
+    }
 app =
     Lamdera.backend
         { init = init
@@ -40,14 +46,12 @@ allPlayersUpdates maybeGame =
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
-        ClientConnected sessionId clientId ->
+        ClientConnected _ _ ->
             ( model
-            , Cmd.batch
-                [ broadcast NoOpToFrontend
-                ]
+            , Cmd.none
             )
 
-        ClientDisconnected sessionId clientId ->
+        ClientDisconnected _ clientId ->
             let
                 playerGames : Dict.Dict String Game
                 playerGames =
@@ -166,7 +170,7 @@ updateFromFrontend sessionId clientId msg model =
 
 
 subscriptions : Model -> Sub BackendMsg
-subscriptions model =
+subscriptions _ =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
         , Lamdera.onDisconnect ClientDisconnected

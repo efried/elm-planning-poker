@@ -1,4 +1,4 @@
-module Types exposing (..)
+module Types exposing (BackendModel, BackendMsg(..), CardOptions, FrontendModel, FrontendMsg(..), Game, ToBackend(..), ToFrontend(..))
 
 import Dict exposing (Dict)
 import Element exposing (Device)

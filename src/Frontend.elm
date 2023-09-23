@@ -1,19 +1,18 @@
-port module Frontend exposing (..)
+port module Frontend exposing (Model, app, builtins, copy_to_clipboard_to_js, init, subscriptions, update, updateFromBackend, view)
 
-import Browser exposing (UrlRequest(..))
 import Browser.Dom
 import Browser.Events
-import Dict exposing (..)
+import Dict
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html exposing (Html, hr)
+import Html
 import Html.Attributes as HtmlAttributes
 import Icons
 import Lamdera
-import Maybe exposing (..)
+import Maybe
 import Stats exposing (mostCommon)
 import Task
 import Types exposing (..)
@@ -71,7 +70,7 @@ update msg model =
             ( model, Lamdera.sendToBackend (CreateGame model.cardOptions) )
 
         CardSelected game card ->
-            ( { model | selectedCard = Just card }, Lamdera.sendToBackend (UpdatePlayerCard game.code card) )
+            ( { model | selectedCard = Maybe.Just card }, Lamdera.sendToBackend (UpdatePlayerCard game.code card) )
 
         GameCodeEntered code ->
             ( { model | enteredGameCode = code }, Cmd.none )
@@ -119,25 +118,10 @@ subscriptions _ =
 port copy_to_clipboard_to_js : String -> Cmd msg
 
 
-logo : Element msg
-logo =
-    el
-        [ centerX
-        , Font.color builtins.green
-        , Font.shadow
-            { color = builtins.black
-            , offset = ( 2, 2 )
-            , blur = 1
-            }
-        , Font.heavy
-        , Font.size 48
-        ]
-        (text "Planning Poker")
-
-
 radioOption : Element msg -> Input.OptionState -> Element.Element msg
 radioOption optionLabel status =
     let
+        glowSize : Float
         glowSize =
             case status of
                 Input.Selected ->
@@ -146,6 +130,7 @@ radioOption optionLabel status =
                 _ ->
                     0
 
+        boxLength : Element.Length
         boxLength =
             case status of
                 Input.Selected ->
@@ -187,7 +172,7 @@ getCards game =
         |> List.filterMap identity
 
 
-view : Model -> Html FrontendMsg
+view : Model -> Html.Html FrontendMsg
 view model =
     layout []
         (case model.game of
@@ -222,7 +207,7 @@ view model =
                                 , Font.color builtins.white
                                 , alignBottom
                                 ]
-                                { onPress = Just GameCreated
+                                { onPress = Maybe.Just GameCreated
                                 , label = text "Start New Game"
                                 }
                             , el [ centerX ]
@@ -230,7 +215,7 @@ view model =
                                     [ paddingXY 0 16
                                     ]
                                     { onChange = ChooseCardOptions
-                                    , selected = Just model.cardOptions
+                                    , selected = Maybe.Just model.cardOptions
                                     , label =
                                         Input.labelLeft
                                             [ paddingEach { left = 0, right = 16, top = 0, bottom = 0 } ]
@@ -244,32 +229,28 @@ view model =
                             ]
                         ]
                     , row [ height (fillPortion 1), centerX, width (fill |> maximum 200) ]
-                        [ html (hr [ HtmlAttributes.style "width" "100%" ] []) ]
+                        [ html (Html.hr [ HtmlAttributes.style "width" "100%" ] []) ]
                     , row
                         [ height (fillPortion 5), width fill, padding 16 ]
                         [ column [ centerX, alignTop, spacing 16 ]
                             [ Input.text [ width fill, Font.center ]
                                 { onChange = GameCodeEntered
                                 , text = model.enteredGameCode
-                                , placeholder = Just (Input.placeholder [ Font.color (rgb255 217 217 217) ] (text "Enter code"))
+                                , placeholder = Maybe.Just (Input.placeholder [ Font.color (rgb255 217 217 217) ] (text "Enter code"))
                                 , label = Input.labelHidden "Enter a game code"
                                 }
                             , Input.button
                                 [ centerX, padding 16, Border.rounded 8, Background.color builtins.green, Font.color builtins.white ]
-                                { onPress = Just RequestGame, label = text "Join Existing Game" }
+                                { onPress = Maybe.Just RequestGame, label = text "Join Existing Game" }
                             ]
                         ]
                     ]
 
-            Just game ->
+            Maybe.Just game ->
                 let
                     cards : List Int
                     cards =
                         getCards game
-
-                    mostCommonCard : List Int
-                    mostCommonCard =
-                        mostCommon cards
                 in
                 column [ width fill, height fill, padding 16 ]
                     [ wrappedRow [ width fill ]
@@ -284,7 +265,7 @@ view model =
                                 , Font.size 16
                                 , alignBottom
                                 ]
-                                { onPress = Just LeftGame
+                                { onPress = Maybe.Just LeftGame
                                 , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave Game" ]
                                 }
                             ]
@@ -296,7 +277,7 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Game Code: " ++ game.code)), Input.button [] { onPress = Just (CopyCodeToClipboard game), label = Icons.clipboard } ]
+                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Game Code: " ++ game.code)), Input.button [] { onPress = Maybe.Just (CopyCodeToClipboard game), label = Icons.clipboard } ]
                             , el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (Dict.size game.playedCards)))
                             ]
                         ]
@@ -336,7 +317,7 @@ view model =
                                         , Border.rounded 8
                                         , Border.width 2
                                         ]
-                                        { onPress = Just ToggleStats
+                                        { onPress = Maybe.Just ToggleStats
                                         , label =
                                             if model.hideStats then
                                                 text "Reveal Results"
@@ -351,7 +332,7 @@ view model =
                                         , Border.rounded 8
                                         , Border.width 2
                                         ]
-                                        { onPress = Just (ResetGame game)
+                                        { onPress = Maybe.Just (ResetGame game)
                                         , label = text "Reset"
                                         }
                                     ]
@@ -360,6 +341,11 @@ view model =
                                     [ statSection "Cards counted" (List.length cards |> String.fromInt) ]
 
                                  else
+                                    let
+                                        mostCommonCard : List Int
+                                        mostCommonCard =
+                                            mostCommon cards
+                                    in
                                     [ statSection "Cards"
                                         (if List.isEmpty cards then
                                             "None"
@@ -408,16 +394,7 @@ fibonacci =
     [ 1, 2, 3, 5, 8, 13, 21, 34, 55 ]
 
 
-type alias BuiltInColors =
-    { babyBlue : Color
-    , green : Color
-    , white : Color
-    , black : Color
-    , red : Color
-    }
-
-
-builtins : BuiltInColors
+builtins : { babyBlue : Color, green : Color, white : Color, black : Color, red : Color }
 builtins =
     { babyBlue = rgb255 138 205 234
     , green = rgb255 16 69 71
