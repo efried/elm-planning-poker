@@ -2,7 +2,7 @@ module Types exposing (BackendModel, BackendMsg(..), CardOptions, FrontendModel,
 
 import Dict exposing (Dict)
 import Element exposing (Device)
-import Lamdera exposing (ClientId, SessionId)
+import Lamdera exposing (ClientId, Key, SessionId)
 
 
 type alias CardOptions =
@@ -23,6 +23,7 @@ type alias FrontendModel =
     , cardOptions : CardOptions
     , hideStats : Bool
     , device : Device
+    , key : Key
     }
 
 
@@ -62,5 +63,6 @@ type BackendMsg
 
 type ToFrontend
     = NoOpToFrontend
+    | CreatedGameReceived (Maybe Game)
     | GameReceived (Maybe Game)
     | GameReset (Maybe Game)

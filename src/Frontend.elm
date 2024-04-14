@@ -1,7 +1,9 @@
 port module Frontend exposing (Model, app, builtins, copy_to_clipboard_to_js, init, subscriptions, update, updateFromBackend, view)
 
+import Browser
 import Browser.Dom
 import Browser.Events
+import Browser.Navigation exposing (pushUrl, replaceUrl)
 import Dict
 import Element exposing (..)
 import Element.Background as Background
@@ -11,11 +13,13 @@ import Element.Input as Input
 import Html
 import Html.Attributes as HtmlAttributes
 import Icons
-import Lamdera
+import Lamdera exposing (Key, Url)
 import Maybe
 import Stats exposing (mostCommon)
 import Task
 import Types exposing (..)
+import Url.Builder
+import Url.Parser
 
 
 type alias Model =
@@ -24,8 +28,8 @@ type alias Model =
 
 app =
     Lamdera.frontend
-        { init = \_ -> \_ -> init
-        , onUrlRequest = \_ -> NoOpFrontendMsg
+        { init = init
+        , onUrlRequest = onUrlRequest
         , onUrlChange = \_ -> NoOpFrontendMsg
         , update = update
         , updateFromBackend = updateFromBackend
@@ -38,26 +42,41 @@ app =
         }
 
 
-init : ( Model, Cmd FrontendMsg )
-init =
+init : Url -> Key -> ( Model, Cmd FrontendMsg )
+init url key =
     ( { game = Nothing
       , selectedCard = Nothing
       , enteredGameCode = ""
       , hideStats = True
       , cardOptions = fibonacci
       , device = { class = Desktop, orientation = Landscape }
+      , key = key
       }
-    , Task.attempt
-        (\viewport ->
-            case viewport of
-                Err _ ->
-                    NoOpFrontendMsg
+    , Cmd.batch
+        [ Task.attempt
+            (\viewport ->
+                case viewport of
+                    Err _ ->
+                        NoOpFrontendMsg
 
-                Ok vp ->
-                    GotWindowDimensions (round vp.scene.width) (round vp.scene.height)
-        )
-        Browser.Dom.getViewport
+                    Ok vp ->
+                        GotWindowDimensions (round vp.scene.width) (round vp.scene.height)
+            )
+            Browser.Dom.getViewport
+        , case Url.Parser.parse Url.Parser.string url of
+            Just code ->
+                Lamdera.sendToBackend (JoinGame code)
+
+            Nothing ->
+                Cmd.none
+        ]
     )
+
+
+onUrlRequest : Browser.UrlRequest -> FrontendMsg
+onUrlRequest urlReqest =
+    -- based on url either leave game or leave game and join new game
+    NoOpFrontendMsg
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
@@ -79,7 +98,12 @@ update msg model =
             ( model, Lamdera.sendToBackend (JoinGame model.enteredGameCode) )
 
         LeftGame ->
-            ( { model | game = Nothing }, Lamdera.sendToBackend LeaveGame )
+            ( { model | game = Nothing }
+            , Cmd.batch
+                [ pushUrl model.key (Url.Builder.absolute [] [])
+                , Lamdera.sendToBackend LeaveGame
+                ]
+            )
 
         ToggleStats ->
             ( { model | hideStats = not model.hideStats }, Cmd.none )
@@ -91,7 +115,11 @@ update msg model =
             ( { model | cardOptions = options }, Cmd.none )
 
         CopyCodeToClipboard game ->
-            ( model, copy_to_clipboard_to_js game.code )
+            let
+                roomLink =
+                    Url.Builder.absolute [ game.code ] []
+            in
+            ( model, copy_to_clipboard_to_js roomLink )
 
         GotWindowDimensions w h ->
             ( { model | device = classifyDevice { width = w, height = h } }, Cmd.none )
@@ -103,8 +131,25 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
+        CreatedGameReceived maybeGame ->
+            ( { model | game = maybeGame, enteredGameCode = "" }
+            , case maybeGame of
+                Just game ->
+                    pushUrl model.key (Url.Builder.absolute [ game.code ] [])
+
+                Nothing ->
+                    Cmd.none
+            )
+
         GameReceived maybeGame ->
-            ( { model | game = maybeGame, enteredGameCode = "" }, Cmd.none )
+            ( { model | game = maybeGame, enteredGameCode = "" }
+            , case maybeGame of
+                Just game ->
+                    replaceUrl model.key (Url.Builder.absolute [ game.code ] [])
+
+                Nothing ->
+                    Cmd.none
+            )
 
         GameReset maybeGame ->
             ( { model | game = maybeGame, selectedCard = Nothing, hideStats = True }, Cmd.none )
@@ -177,29 +222,28 @@ view model =
     layout []
         (case model.game of
             Nothing ->
-                column [ width fill, height fill ]
-                    [ row
-                        [ height (fillPortion 5)
-                        , width fill
+                column [ width fill, height fill, centerY ]
+                    [ el
+                        [ height (fillPortion 3)
+                        , centerX
+                        , centerY
+                        , Font.color builtins.green
+                        , Font.shadow
+                            { color = builtins.black
+                            , offset = ( 2, 2 )
+                            , blur = 1
+                            }
+                        , Font.heavy
+                        , Font.size 48
+                        , spacingXY 0 80
                         ]
-                        [ column
-                            [ height fill
-                            , centerX
-                            ]
-                            [ el
-                                [ centerX
-                                , Font.color builtins.green
-                                , Font.shadow
-                                    { color = builtins.black
-                                    , offset = ( 2, 2 )
-                                    , blur = 1
-                                    }
-                                , Font.heavy
-                                , Font.size 48
-                                , paddingXY 0 80
-                                ]
-                                (text "Planning Poker")
-                            , Input.button
+                        (el
+                            [ centerY ]
+                            (text "Planning Poker")
+                        )
+                    , row [ height (fillPortion 2), width fill ]
+                        [ column [ alignTop, centerX ]
+                            [ Input.button
                                 [ centerX
                                 , padding 16
                                 , Border.rounded 8
@@ -226,22 +270,6 @@ view model =
                                         ]
                                     }
                                 )
-                            ]
-                        ]
-                    , row [ height (fillPortion 1), centerX, width (fill |> maximum 200) ]
-                        [ html (Html.hr [ HtmlAttributes.style "width" "100%" ] []) ]
-                    , row
-                        [ height (fillPortion 5), width fill, padding 16 ]
-                        [ column [ centerX, alignTop, spacing 16 ]
-                            [ Input.text [ width fill, Font.center ]
-                                { onChange = GameCodeEntered
-                                , text = model.enteredGameCode
-                                , placeholder = Maybe.Just (Input.placeholder [ Font.color (rgb255 217 217 217) ] (text "Enter code"))
-                                , label = Input.labelHidden "Enter a game code"
-                                }
-                            , Input.button
-                                [ centerX, padding 16, Border.rounded 8, Background.color builtins.green, Font.color builtins.white ]
-                                { onPress = Maybe.Just RequestGame, label = text "Join Existing Game" }
                             ]
                         ]
                     ]
@@ -277,8 +305,16 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ row [ spacing 8 ] [ el [ alignRight ] (text ("Game Code: " ++ game.code)), Input.button [] { onPress = Maybe.Just (CopyCodeToClipboard game), label = Icons.clipboard } ]
-                            , el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (Dict.size game.playedCards)))
+                            [ el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (Dict.size game.playedCards)))
+                            , Input.button [ alignRight ]
+                                { onPress = Maybe.Just (CopyCodeToClipboard game)
+                                , label =
+                                    row
+                                        [ spacing 8 ]
+                                        [ el [ alignRight ] (text "Copy Game Link ")
+                                        , Icons.copy
+                                        ]
+                                }
                             ]
                         ]
                     , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32, paddingXY 0 24 ]

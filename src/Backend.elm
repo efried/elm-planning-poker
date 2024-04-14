@@ -85,7 +85,7 @@ update msg model =
                     { code = code, cardOptions = pointOptions, playedCards = Dict.singleton clientId Nothing }
             in
             ( Dict.insert code game model
-            , sendToFrontend clientId (GameReceived (Just game))
+            , sendToFrontend clientId (CreatedGameReceived (Just game))
             )
 
         NoOpBackendMsg ->
