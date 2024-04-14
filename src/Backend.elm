@@ -107,18 +107,22 @@ updateFromFrontend sessionId clientId msg model =
             ( model, Random.generate (CodeCreated clientId pointOptions) keyGenerator )
 
         JoinGame code ->
-            let
-                updatedGames : Dict.Dict String Game
-                updatedGames =
-                    Dict.update code
-                        (Maybe.map
-                            (\game -> { game | playedCards = Dict.insert clientId Nothing game.playedCards })
-                        )
-                        model
-            in
-            ( updatedGames
-            , Cmd.batch (Dict.get code updatedGames |> allPlayersUpdates)
-            )
+            if Dict.member code model then
+                let
+                    updatedGames : Dict.Dict String Game
+                    updatedGames =
+                        Dict.update code
+                            (Maybe.map
+                                (\game -> { game | playedCards = Dict.insert clientId Nothing game.playedCards })
+                            )
+                            model
+                in
+                ( updatedGames
+                , Cmd.batch (Dict.get code updatedGames |> allPlayersUpdates)
+                )
+
+            else
+                ( model, sendToFrontend clientId (GameReceived Nothing) )
 
         UpdatePlayerCard gameCode card ->
             let

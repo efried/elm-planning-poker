@@ -148,7 +148,7 @@ updateFromBackend msg model =
                     replaceUrl model.key (Url.Builder.absolute [ game.code ] [])
 
                 Nothing ->
-                    Cmd.none
+                    pushUrl model.key (Url.Builder.absolute [] [])
             )
 
         GameReset maybeGame ->
