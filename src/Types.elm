@@ -23,7 +23,7 @@ type alias FrontendModel =
     , cardOptions : CardOptions
     , hideStats : Bool
     , device : Device
-    , key : Key
+    , key : Maybe Key
     }
 
 

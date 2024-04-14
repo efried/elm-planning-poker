@@ -50,7 +50,7 @@ init url key =
       , hideStats = True
       , cardOptions = fibonacci
       , device = { class = Desktop, orientation = Landscape }
-      , key = key
+      , key = Just key
       }
     , Cmd.batch
         [ Task.attempt
@@ -100,7 +100,12 @@ update msg model =
         LeftGame ->
             ( { model | game = Nothing }
             , Cmd.batch
-                [ pushUrl model.key (Url.Builder.absolute [] [])
+                [ case model.key of
+                    Just key ->
+                        pushUrl key (Url.Builder.absolute [] [])
+
+                    Nothing ->
+                        Cmd.none
                 , Lamdera.sendToBackend LeaveGame
                 ]
             )
@@ -133,22 +138,25 @@ updateFromBackend msg model =
 
         CreatedGameReceived maybeGame ->
             ( { model | game = maybeGame, enteredGameCode = "" }
-            , case maybeGame of
-                Just game ->
-                    pushUrl model.key (Url.Builder.absolute [ game.code ] [])
+            , case ( maybeGame, model.key ) of
+                ( Just game, Just key ) ->
+                    pushUrl key (Url.Builder.absolute [ game.code ] [])
 
-                Nothing ->
+                _ ->
                     Cmd.none
             )
 
         GameReceived maybeGame ->
             ( { model | game = maybeGame, enteredGameCode = "" }
-            , case maybeGame of
-                Just game ->
-                    replaceUrl model.key (Url.Builder.absolute [ game.code ] [])
+            , case ( maybeGame, model.key ) of
+                ( Just game, Just key ) ->
+                    replaceUrl key (Url.Builder.absolute [ game.code ] [])
 
-                Nothing ->
-                    pushUrl model.key (Url.Builder.absolute [] [])
+                ( Nothing, Just key ) ->
+                    pushUrl key (Url.Builder.absolute [] [])
+
+                _ ->
+                    Cmd.none
             )
 
         GameReset maybeGame ->
