@@ -97,7 +97,7 @@ update msg model =
         RequestGame ->
             ( model, Lamdera.sendToBackend (JoinGame model.enteredGameCode) )
 
-        LeftGame ->
+        LeftGame game ->
             ( { model | game = Nothing }
             , Cmd.batch
                 [ case model.key of
@@ -106,7 +106,7 @@ update msg model =
 
                     Nothing ->
                         Cmd.none
-                , Lamdera.sendToBackend LeaveGame
+                , Lamdera.sendToBackend (LeaveGame game.code)
                 ]
             )
 
@@ -221,7 +221,6 @@ statSection label value =
 getCards : Game -> List Int
 getCards game =
     game.playedCards
-        |> Dict.values
         |> List.filterMap identity
 
 
@@ -301,7 +300,7 @@ view model =
                                 , Font.size 16
                                 , alignBottom
                                 ]
-                                { onPress = Maybe.Just LeftGame
+                                { onPress = Maybe.Just (LeftGame game)
                                 , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave Game" ]
                                 }
                             ]
@@ -313,7 +312,7 @@ view model =
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
-                            [ el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (Dict.size game.playedCards)))
+                            [ el [ alignRight ] (text ("Connected Players: " ++ String.fromInt (List.length game.playedCards)))
                             , Input.button [ alignRight ]
                                 { onPress = Maybe.Just (CopyCodeToClipboard game)
                                 , label =

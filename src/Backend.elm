@@ -29,64 +29,37 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( Dict.empty, Cmd.none )
+    ( { sessions = Dict.empty, games = Dict.empty }, Cmd.none )
 
 
-allPlayersUpdates : Maybe Game -> List (Cmd BackendMsg)
+allPlayersUpdates : Maybe GameWithSessions -> List (Cmd BackendMsg)
 allPlayersUpdates maybeGame =
     maybeGame
         |> Maybe.map (\game -> Dict.keys game.playedCards)
         |> Maybe.withDefault []
         |> List.map
             (\player ->
-                sendToFrontend player (GameReceived maybeGame)
+                sendToFrontend player (GameReceived (maybeGame |> Maybe.map gameForFrontend))
             )
 
 
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
-        ClientConnected _ _ ->
-            ( model
-            , Cmd.none
-            )
-
-        ClientDisconnected _ clientId ->
+        CodeCreated sessionId pointOptions code ->
             let
-                playerGames : Dict.Dict String Game
-                playerGames =
-                    model
-                        |> Dict.filter (\_ game -> Dict.member clientId game.playedCards)
-                        |> Dict.map
-                            (\_ game ->
-                                { game
-                                    | playedCards = Dict.remove clientId game.playedCards
-                                }
-                            )
-
-                nonEmptyGames : Dict.Dict String Game
-                nonEmptyGames =
-                    Dict.union
-                        (Dict.filter (\_ game -> Dict.isEmpty game.playedCards |> not) playerGames)
-                        (Dict.diff model playerGames)
-            in
-            ( nonEmptyGames
-            , Cmd.batch
-                (List.foldl (Just >> allPlayersUpdates >> List.append)
-                    []
-                    (Dict.values playerGames)
-                )
-            )
-
-        CodeCreated clientId pointOptions code ->
-            let
-                game : Game
+                game : GameWithSessions
                 game =
-                    { code = code, cardOptions = pointOptions, playedCards = Dict.singleton clientId Nothing }
+                    { code = code, cardOptions = pointOptions, playedCards = Dict.singleton sessionId Nothing }
             in
-            ( Dict.insert code game model
-            , sendToFrontend clientId (CreatedGameReceived (Just game))
+            ( { sessions = Dict.update sessionId (\_ -> Just (Just code)) model.sessions
+              , games = Dict.insert code game model.games
+              }
+            , sendToFrontend sessionId (CreatedGameReceived (Just (gameForFrontend game)))
             )
+
+        NoOpConnectionMsg sessionId clientId ->
+            ( model, Cmd.none )
 
         NoOpBackendMsg ->
             ( model, Cmd.none )
@@ -104,70 +77,99 @@ updateFromFrontend sessionId clientId msg model =
             ( model, Cmd.none )
 
         CreateGame pointOptions ->
-            ( model, Random.generate (CodeCreated clientId pointOptions) keyGenerator )
+            ( model, Random.generate (CodeCreated sessionId pointOptions) keyGenerator )
 
         JoinGame code ->
-            if Dict.member code model then
+            if Dict.member code model.games then
                 let
-                    updatedGames : Dict.Dict String Game
                     updatedGames =
                         Dict.update code
                             (Maybe.map
-                                (\game -> { game | playedCards = Dict.insert clientId Nothing game.playedCards })
+                                (\game -> { game | playedCards = Dict.insert sessionId Nothing game.playedCards })
                             )
-                            model
+                            model.games
                 in
-                ( updatedGames
+                ( { games = updatedGames
+                  , sessions = Dict.update sessionId (\_ -> Just (Just code)) model.sessions
+                  }
                 , Cmd.batch (Dict.get code updatedGames |> allPlayersUpdates)
                 )
 
             else
-                ( model, sendToFrontend clientId (GameReceived Nothing) )
+                ( model, sendToFrontend sessionId (GameReceived Nothing) )
 
-        UpdatePlayerCard gameCode card ->
+        UpdatePlayerCard gameId card ->
             let
-                updatedGames : Dict.Dict String Game
                 updatedGames =
                     Dict.update
-                        gameCode
+                        gameId
                         (Maybe.map
                             (\game ->
                                 { game
                                     | playedCards =
-                                        Dict.update clientId (Maybe.map (\_ -> Just card)) game.playedCards
+                                        Dict.update sessionId (Maybe.map (\_ -> Just card)) game.playedCards
                                 }
                             )
                         )
-                        model
+                        model.games
             in
-            ( updatedGames
-            , Cmd.batch (Dict.get gameCode updatedGames |> allPlayersUpdates)
+            ( { model | games = updatedGames }
+            , Cmd.batch (Dict.get gameId updatedGames |> allPlayersUpdates)
             )
 
-        LeaveGame ->
-            update (ClientDisconnected sessionId clientId) model
+        LeaveGame gameId ->
+            let
+                updatedGames =
+                    Dict.update
+                        gameId
+                        (Maybe.map
+                            (\game ->
+                                { game
+                                    | playedCards =
+                                        Dict.remove sessionId game.playedCards
+                                }
+                            )
+                        )
+                        model.games
+
+                gamePlayerCount =
+                    Dict.get gameId model.games
+                        |> Maybe.map .playedCards
+                        |> Maybe.map Dict.size
+                        |> Maybe.withDefault 0
+            in
+            ( { games =
+                    if gamePlayerCount > 0 then
+                        updatedGames
+
+                    else
+                        Dict.remove gameId model.games
+              , sessions = Dict.update sessionId (\_ -> Nothing) model.sessions
+              }
+            , Cmd.batch (Dict.get gameId updatedGames |> allPlayersUpdates)
+            )
 
         ResetGameCards gameCode ->
             let
-                updatedGames : Dict.Dict String Game
+                updatedGames : Dict.Dict GameId GameWithSessions
                 updatedGames =
                     Dict.update
                         gameCode
                         (Maybe.map (\game -> { game | playedCards = Dict.map (\_ _ -> Nothing) game.playedCards }))
-                        model
+                        model.games
 
-                resetGame : Maybe Game
+                resetGame : Maybe GameWithSessions
                 resetGame =
                     Dict.get gameCode updatedGames
             in
-            ( updatedGames
+            ( { model | games = updatedGames }
             , Cmd.batch
                 (resetGame
                     |> Maybe.map (\game -> Dict.keys game.playedCards)
                     |> Maybe.withDefault []
                     |> List.map
                         (\player ->
-                            sendToFrontend player (GameReset resetGame)
+                            sendToFrontend player (GameReset (resetGame |> Maybe.map gameForFrontend))
                         )
                 )
             )
@@ -176,6 +178,15 @@ updateFromFrontend sessionId clientId msg model =
 subscriptions : Model -> Sub BackendMsg
 subscriptions _ =
     Sub.batch
-        [ Lamdera.onConnect ClientConnected
-        , Lamdera.onDisconnect ClientDisconnected
+        [ Lamdera.onConnect NoOpConnectionMsg
+        , Lamdera.onDisconnect NoOpConnectionMsg
         ]
+
+
+
+-- UTILS
+
+
+gameForFrontend : GameWithSessions -> Game
+gameForFrontend { code, cardOptions, playedCards } =
+    Game code cardOptions (Dict.values playedCards)

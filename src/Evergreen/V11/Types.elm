@@ -1,23 +1,16 @@
-module Types exposing (BackendModel, BackendMsg(..), CardOptions, FrontendModel, FrontendMsg(..), Game, GameId, GameWithSessions, ToBackend(..), ToFrontend(..))
+module Evergreen.V11.Types exposing (..)
 
-import Dict exposing (Dict)
-import Element exposing (Device)
-import Lamdera exposing (ClientId, Key, SessionId)
-
-
-type alias CardOptions =
-    List Int
+import Dict
+import Element
+import Lamdera
 
 
 type alias GameId =
     String
 
 
-type alias GameWithSessions =
-    { code : GameId
-    , cardOptions : CardOptions
-    , playedCards : Dict SessionId (Maybe Int)
-    }
+type alias CardOptions =
+    List Int
 
 
 type alias Game =
@@ -33,14 +26,21 @@ type alias FrontendModel =
     , enteredGameCode : String
     , cardOptions : CardOptions
     , hideStats : Bool
-    , device : Device
-    , key : Maybe Key
+    , device : Element.Device
+    , key : Maybe Lamdera.Key
+    }
+
+
+type alias GameWithSessions =
+    { code : GameId
+    , cardOptions : CardOptions
+    , playedCards : Dict.Dict Lamdera.SessionId (Maybe Int)
     }
 
 
 type alias BackendModel =
-    { sessions : Dict SessionId (Maybe GameId)
-    , games : Dict GameId GameWithSessions
+    { sessions : Dict.Dict Lamdera.SessionId (Maybe GameId)
+    , games : Dict.Dict GameId GameWithSessions
     }
 
 
@@ -68,8 +68,8 @@ type ToBackend
 
 
 type BackendMsg
-    = NoOpConnectionMsg SessionId ClientId
-    | CodeCreated SessionId CardOptions GameId
+    = NoOpConnectionMsg Lamdera.SessionId Lamdera.ClientId
+    | CodeCreated Lamdera.SessionId CardOptions GameId
     | NoOpBackendMsg
 
 
