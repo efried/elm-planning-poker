@@ -146,7 +146,10 @@ updateFromFrontend sessionId clientId msg model =
                         Dict.remove gameId model.games
               , sessions = Dict.update sessionId (\_ -> Nothing) model.sessions
               }
-            , Cmd.batch (Dict.get gameId updatedGames |> allPlayersUpdates)
+            , Cmd.batch
+                (sendToFrontend sessionId (GameReceived Nothing)
+                    :: (Dict.get gameId updatedGames |> allPlayersUpdates)
+                )
             )
 
         ResetGameCards gameCode ->
