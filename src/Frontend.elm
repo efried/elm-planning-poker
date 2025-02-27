@@ -4,14 +4,12 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation exposing (pushUrl, replaceUrl)
-import Dict
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html
-import Html.Attributes as HtmlAttributes
 import Icons
 import Lamdera exposing (Key, Url)
 import Maybe
@@ -187,24 +185,24 @@ radioOption optionLabel status =
         boxLength =
             case status of
                 Input.Selected ->
-                    px 52
+                    px 76
 
                 _ ->
-                    px 48
+                    px 72
     in
     el
         [ height boxLength
         , width boxLength
         , centerX
         , padding 8
-        , Border.rounded 4
-        , Border.glow builtins.babyBlue glowSize
-        , Background.color builtins.green
+        , Border.glow builtins.mint glowSize
+        , Border.color builtins.mint
+        , Border.width 2
         ]
         (el
             [ centerX
             , centerY
-            , Font.color builtins.white
+            , Font.color builtins.mintCream
             ]
             optionLabel
         )
@@ -212,8 +210,8 @@ radioOption optionLabel status =
 
 statSection : String -> String -> Element.Element msg
 statSection label value =
-    row [ width fill, spaceEvenly ]
-        [ el [ Font.family [ Font.monospace ] ] (text label)
+    row [ width fill, spaceEvenly, Font.family [ Font.monospace ], Font.color builtins.mintCream ]
+        [ text label
         , text value
         ]
 
@@ -226,36 +224,33 @@ getCards game =
 
 view : Model -> Html.Html FrontendMsg
 view model =
-    layout []
+    layout
+        [ Font.family [ Font.typeface "Monaco", Font.typeface "Arial" ]
+        , height fill
+        , Background.gradient { angle = 0, steps = [ builtins.slate, builtins.black ] }
+        ]
         (case model.game of
             Nothing ->
-                column [ width fill, height fill, centerY ]
-                    [ el
-                        [ height (fillPortion 3)
-                        , centerX
-                        , centerY
-                        , Font.color builtins.green
-                        , Font.shadow
-                            { color = builtins.black
-                            , offset = ( 2, 2 )
-                            , blur = 1
-                            }
-                        , Font.heavy
-                        , Font.size 48
-                        , spacingXY 0 80
+                column [ width fill, height fill ]
+                    [ row [ height (fillPortion 3), width fill ]
+                        [ column [ centerX, centerY ]
+                            [ el
+                                [ Font.color builtins.mint
+                                , Font.extraBold
+                                , Font.size 64
+                                ]
+                                (text "Planning Poker")
+                            , Element.image [ centerX ] { src = "/public/header.svg", description = "Fanned out playing cards" }
+                            ]
                         ]
-                        (el
-                            [ centerY ]
-                            (text "Planning Poker")
-                        )
                     , row [ height (fillPortion 2), width fill ]
-                        [ column [ alignTop, centerX ]
+                        [ column [ centerX, centerY ]
                             [ Input.button
                                 [ centerX
                                 , padding 16
-                                , Border.rounded 8
-                                , Background.color builtins.green
-                                , Font.color builtins.white
+                                , Border.color builtins.mint
+                                , Border.width 2
+                                , Font.color builtins.mint
                                 , alignBottom
                                 ]
                                 { onPress = Maybe.Just GameCreated
@@ -264,13 +259,11 @@ view model =
                             , el [ centerX ]
                                 (Input.radio
                                     [ paddingXY 0 16
+                                    , Font.color builtins.mint
                                     ]
                                     { onChange = ChooseCardOptions
                                     , selected = Maybe.Just model.cardOptions
-                                    , label =
-                                        Input.labelLeft
-                                            [ paddingEach { left = 0, right = 16, top = 0, bottom = 0 } ]
-                                            (text "Options")
+                                    , label = Input.labelHidden "Card Pattern"
                                     , options =
                                         [ Input.option fibonacci (text "Fibonacci")
                                         , Input.option timesTwo (text "Multiply by 2")
@@ -293,10 +286,9 @@ view model =
                             [ Input.button
                                 [ centerX
                                 , padding 8
-                                , Border.rounded 8
-                                , Border.color builtins.green
+                                , Border.color builtins.mint
                                 , Border.width 2
-                                , Font.color builtins.green
+                                , Font.color builtins.mint
                                 , Font.size 16
                                 , alignBottom
                                 ]
@@ -308,7 +300,7 @@ view model =
                             [ spacing 8
                             , alignRight
                             , Font.size 16
-                            , Font.color builtins.green
+                            , Font.color builtins.mintCream
                             , Font.semiBold
                             , Font.family [ Font.monospace ]
                             ]
@@ -334,7 +326,7 @@ view model =
                             [ spacing 16, centerX, centerY ]
                             { onChange = CardSelected game
                             , selected = model.selectedCard
-                            , label = Input.labelAbove [ centerX, paddingXY 0 16 ] (text "Select a Card")
+                            , label = Input.labelAbove [ Font.size 24, centerX, paddingXY 0 16, Font.color builtins.mint ] (text "Select a Card")
                             , options =
                                 List.map
                                     (\val ->
@@ -355,9 +347,8 @@ view model =
                                 [ row [ spaceEvenly, width fill ]
                                     [ Input.button
                                         [ padding 8
-                                        , Font.color builtins.green
-                                        , Border.color builtins.green
-                                        , Border.rounded 8
+                                        , Font.color builtins.mint
+                                        , Border.color builtins.mint
                                         , Border.width 2
                                         ]
                                         { onPress = Maybe.Just ToggleStats
@@ -372,7 +363,6 @@ view model =
                                         [ padding 8
                                         , Font.color builtins.red
                                         , Border.color builtins.red
-                                        , Border.rounded 8
                                         , Border.width 2
                                         ]
                                         { onPress = Maybe.Just (ResetGame game)
@@ -437,11 +427,11 @@ fibonacci =
     [ 1, 2, 3, 5, 8, 13, 21, 34, 55 ]
 
 
-builtins : { babyBlue : Color, green : Color, white : Color, black : Color, red : Color }
+builtins : { black : Color, red : Color, mintCream : Color, mint : Color, slate : Color }
 builtins =
-    { babyBlue = rgb255 138 205 234
-    , green = rgb255 16 69 71
-    , white = rgb255 255 255 255
-    , black = rgb255 0 0 0
-    , red = rgb255 222 108 131
+    { black = rgb255 37 37 37
+    , red = rgb255 247 4 52
+    , mintCream = rgb255 238 249 241
+    , mint = rgb255 32 214 165
+    , slate = rgb255 42 71 71
     }

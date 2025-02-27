@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="500" height="300">
+  <rect x="100" y="80" width="100" height="140" rx="15" ry="15" fill="#252525" stroke="#2A4747" stroke-width="2" transform="rotate(-20 150 130)"/>
+  <rect x="130" y="70" width="100" height="140" rx="15" ry="15" fill="#252525" stroke="#2A4747" stroke-width="2" transform="rotate(-10 180 130)"/>
+  <rect x="160" y="60" width="100" height="140" rx="15" ry="15" fill="#252525" stroke="#2A4747" stroke-width="2"/>
+  <rect x="190" y="70" width="100" height="140" rx="15" ry="15" fill="#252525" stroke="#2A4747" stroke-width="2" transform="rotate(10 240 130)"/>
+
+  <!-- Card 5 (value 21) -->
+  <rect x="220" y="80" width="100" height="140" rx="15" ry="15" fill="#20D6A5" stroke="#2A4747" stroke-width="2" transform="rotate(20 270 130)"/>
+  <text x="273" y="160" font-family="Ariel, sans-serif" font-size="48" fill="#252525" text-anchor="middle" transform="rotate(20 270 130)">21</text>
+</svg>
