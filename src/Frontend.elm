@@ -240,7 +240,7 @@ view model =
                                 , Font.size 64
                                 ]
                                 (text "Planning Poker")
-                            , Element.image [ centerX ] { src = "/public/header.svg", description = "Fanned out playing cards" }
+                            , Element.image [ centerX ] { src = "/header.svg", description = "Fanned out playing cards" }
                             ]
                         ]
                     , row [ height (fillPortion 2), width fill ]
