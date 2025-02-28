@@ -226,25 +226,37 @@ view : Model -> Html.Html FrontendMsg
 view model =
     layout
         [ Font.family [ Font.typeface "Monaco", Font.typeface "Arial" ]
-        , height fill
+        , width fill
         , Background.gradient { angle = 0, steps = [ builtins.slate, builtins.black ] }
         ]
         (case model.game of
             Nothing ->
-                column [ width fill, height fill ]
+                column
+                    [ width fill
+                    , height fill
+                    , padding 16
+                    ]
                     [ row [ height (fillPortion 3), width fill ]
                         [ column [ centerX, centerY ]
                             [ el
                                 [ Font.color builtins.mint
                                 , Font.extraBold
-                                , Font.size 64
+                                , Font.size
+                                    (if model.device.class == Phone then
+                                        36
+
+                                     else
+                                        64
+                                    )
                                 ]
                                 (text "Planning Poker")
-                            , Element.image [ centerX ] { src = "/header.svg", description = "Fanned out playing cards" }
+                            , Element.image
+                                [ centerX, width (px 300), height (px 200) ]
+                                { src = "/header.svg", description = "Fanned out playing cards" }
                             ]
                         ]
                     , row [ height (fillPortion 2), width fill ]
-                        [ column [ centerX, centerY ]
+                        [ column [ centerX ]
                             [ Input.button
                                 [ centerX
                                 , padding 16
@@ -280,8 +292,8 @@ view model =
                     cards =
                         getCards game
                 in
-                column [ width fill, height fill, padding 16 ]
-                    [ wrappedRow [ width fill ]
+                column [ height fill, width fill, padding 16 ]
+                    [ row [ width fill ]
                         [ column [ alignLeft ]
                             [ Input.button
                                 [ centerX
@@ -316,7 +328,7 @@ view model =
                                 }
                             ]
                         ]
-                    , Element.row [ height (fillPortion 4), centerX, spacingXY 0 32, paddingXY 0 24 ]
+                    , Element.wrappedRow [ height (fillPortion 4), centerX, spacingXY 0 32, paddingXY 0 24 ]
                         [ (if model.device.class == Phone then
                             Input.radio
 
