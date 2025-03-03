@@ -43,6 +43,7 @@ app =
 init : Url -> Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { game = Nothing
+      , existingGame = Nothing
       , selectedCard = Nothing
       , enteredGameCode = ""
       , hideStats = True
@@ -66,7 +67,7 @@ init url key =
                 Lamdera.sendToBackend (JoinGame code)
 
             Nothing ->
-                Cmd.none
+                Lamdera.sendToBackend CheckForSession
         ]
     )
 
@@ -95,8 +96,11 @@ update msg model =
         RequestGame ->
             ( model, Lamdera.sendToBackend (JoinGame model.enteredGameCode) )
 
-        LeftGame game ->
-            ( { model | game = Nothing }
+        RejoinGame gameId ->
+            ( { model | existingGame = Nothing }, Lamdera.sendToBackend (JoinGame gameId) )
+
+        LeftGame gameId ->
+            ( { model | game = Nothing, existingGame = Nothing }
             , Cmd.batch
                 [ case model.key of
                     Just key ->
@@ -104,7 +108,7 @@ update msg model =
 
                     Nothing ->
                         Cmd.none
-                , Lamdera.sendToBackend (LeaveGame game.code)
+                , Lamdera.sendToBackend (LeaveGame gameId)
                 ]
             )
 
@@ -156,6 +160,9 @@ updateFromBackend msg model =
                 _ ->
                     Cmd.none
             )
+
+        ExistingGameReceived gameId ->
+            ( { model | existingGame = Just gameId }, Cmd.none )
 
         GameReset maybeGame ->
             ( { model | game = maybeGame, selectedCard = Nothing, hideStats = True }, Cmd.none )
@@ -222,12 +229,63 @@ getCards game =
         |> List.filterMap identity
 
 
+existingSessionOverlay : GameId -> Element FrontendMsg
+existingSessionOverlay gameId =
+    column
+        [ width fill
+        , height fill
+        , Background.color (rgba 0 0 0 0.7)
+        ]
+        [ column
+            [ centerX
+            , centerY
+            , width (fill |> maximum 400)
+            , padding 24
+            , spacingXY 0 16
+            , Background.color
+                (rgba 42 71 71 0.7)
+            , Font.color builtins.black
+            ]
+            [ paragraph [ Font.center ]
+                [ el [ Font.center ] (text "You're still playing in a game. Would you like to rejoin?") ]
+            , Input.button
+                [ centerX
+                , padding 16
+                , Border.color builtins.black
+                , Background.color builtins.mint
+                , Border.width 2
+                ]
+                { onPress = Maybe.Just (RejoinGame gameId)
+                , label = text "Rejoin Game"
+                }
+            , Input.button
+                [ centerX
+                , padding 16
+                , Border.color builtins.black
+                , Background.color builtins.mint
+                , Border.width 2
+                ]
+                { onPress = Maybe.Just (LeftGame gameId)
+                , label = text "Leave Game"
+                }
+            ]
+        ]
+
+
 view : Model -> Html.Html FrontendMsg
 view model =
     layout
         [ Font.family [ Font.typeface "Monaco", Font.typeface "Arial" ]
         , width fill
         , Background.gradient { angle = 0, steps = [ builtins.slate, builtins.black ] }
+        , inFront
+            (case model.existingGame of
+                Just previousGame ->
+                    existingSessionOverlay previousGame
+
+                Nothing ->
+                    Element.none
+            )
         ]
         (case model.game of
             Nothing ->
@@ -304,7 +362,7 @@ view model =
                                 , Font.size 16
                                 , alignBottom
                                 ]
-                                { onPress = Maybe.Just (LeftGame game)
+                                { onPress = Maybe.Just (LeftGame game.code)
                                 , label = row [ spacingXY 8 0 ] [ text "⬅", text "Leave Game" ]
                                 }
                             ]

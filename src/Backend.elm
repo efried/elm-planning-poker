@@ -98,6 +98,14 @@ updateFromFrontend sessionId clientId msg model =
             else
                 ( model, sendToFrontend sessionId (GameReceived Nothing) )
 
+        CheckForSession ->
+            case Dict.get sessionId model.sessions |> Maybe.withDefault Nothing of
+                Just gameId ->
+                    ( model, sendToFrontend clientId (ExistingGameReceived gameId) )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         UpdatePlayerCard gameId card ->
             let
                 updatedGames =
